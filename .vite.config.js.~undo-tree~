@@ -1,0 +1,22 @@
+(undo-tree-save-format-version . 1)
+"30dcee7d1af3d4bc3ddd053cec165e2e345b2bd3"
+[nil nil nil nil (26779 16306 198819 0) 0 nil]
+([nil nil ((nil rear-nonsticky nil 57 . 58) (nil fontified nil 1 . 7) (nil fontified nil 31 . 56) (1 . 58)) ((#("export default defineConfig({
+  server: { port: 3000 }
+})" 0 6 (face font-lock-keyword-face fontified nil) 6 7 (fontified nil) 7 14 (face font-lock-keyword-face fontified nil) 14 30 (fontified nil) 30 55 (fontified nil) 55 56 (fontified nil) 56 57 (rear-nonsticky nil fontified nil)) . 1) (undo-tree-id25 . -57) (undo-tree-id26 . -57) (undo-tree-id27 . -57) (undo-tree-id28 . -57) (undo-tree-id29 . -57) (nil fontified t 31 . 56) (nil fontified t 1 . 7) (nil rear-nonsticky t 57 . 58)) (26779 16307 620234 0) 0 nil])
+([nil nil ((58 . 59)) ((#("
+" 0 1 (fontified t)) . 58)) (26779 16307 872160 0) 0 nil])
+([nil nil ((#("export default defineConfig({
+  server: { port: 3000 }
+})
+" 0 6 (face font-lock-keyword-face fontified t) 6 7 (fontified t) 7 14 (face font-lock-keyword-face fontified t) 14 30 (fontified t) 30 55 (fontified t) 55 56 (fontified t) 56 57 (rear-nonsticky t fontified t) 57 58 (fontified t)) . 1) (undo-tree-id30 . -57) (undo-tree-id31 . -57) (undo-tree-id32 . -57) (undo-tree-id33 . -57) (undo-tree-id34 . -57) (undo-tree-id35 . -57)) ((1 . 59) (t 26779 16158 346889 710000)) (26779 16308 57063 0) 0 nil])
+([nil nil ((nil rear-nonsticky nil 143 . 144) (1 . 144) (t 26779 16158 346889 710000)) ((#("import { defineConfig } from 'vite'import tailwindcss from '@tailwindcss/vite'export default defineConfig({  plugins: [    tailwindcss(),  ],})" 0 6 (face font-lock-keyword-face fontified nil) 6 29 (fontified nil) 29 35 (face font-lock-string-face fontified nil) 35 41 (face font-lock-keyword-face fontified nil) 41 59 (fontified nil) 59 78 (face font-lock-string-face fontified nil) 78 84 (face font-lock-keyword-face fontified nil) 84 85 (fontified nil) 85 92 (face font-lock-keyword-face fontified nil) 92 142 (fontified nil) 142 143 (rear-nonsticky nil fontified nil)) . 1) (undo-tree-id16 . -143) (undo-tree-id17 . -143) (undo-tree-id18 . -143) (undo-tree-id19 . -143) (undo-tree-id20 . -143) (undo-tree-id21 . -143) (undo-tree-id22 . -143) (undo-tree-id23 . -143) (undo-tree-id24 . -143) (nil rear-nonsticky t 143 . 144)) (26779 16308 234563 0) 0 nil])
+([nil nil ((36 . 37)) nil (26779 16363 322047 0) 0 nil])
+([nil nil ((80 . 81)) nil (26779 16363 322046 0) 0 nil])
+([nil nil ((111 . 112) (#("  " 0 2 (fontified nil)) . 111) (110 . 111)) nil (26779 16363 322044 0) 0 nil])
+([nil nil ((123 . 125) (#("    " 0 4 (fontified nil)) . 123) (122 . 123)) nil (26779 16363 322043 0) 0 nil])
+([nil nil ((140 . 141) (#("  " 0 2 (fontified nil)) . 140) (139 . 140)) nil (26779 16363 322041 0) 0 nil])
+([nil nil ((143 . 144)) nil (26779 16363 322039 0) 0 nil])
+([nil nil ((80 . 81)) nil (26779 16363 322038 0) 0 nil])
+([nil current ((147 . 148) 81) nil (26779 16363 322034 0) 0 nil])
+nil
