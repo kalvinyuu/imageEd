@@ -5,7 +5,7 @@ import { useRef, useState, useCallback } from "react"
 
 type CropState = 'inactive' | 'creating' | 'set' | 'moving' | 'resizing'
 type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se' | null
-
+ 
 export default function HomePage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
