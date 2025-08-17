@@ -17,6 +17,7 @@ export default function HomePage() {
   const [cropStart, setCropStart] = useState<{ x: number; y: number } | null>(null)
   const [cropEnd, setCropEnd] = useState<{ x: number; y: number } | null>(null)
   const [cropState, setCropState] = useState<CropState>('inactive')
+  const [isDrawing, setIsDrawing] = useState(false)
   const [cropGuide, setCropGuide] = useState<string | null>(null)
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null)
   const [activeHandle, setActiveHandle] = useState<ResizeHandle>(null)
@@ -388,6 +389,7 @@ const rotateImage = useCallback((degrees: number) => {
         }
       }
     } else {
+      setIsDrawing(true)
       const ctx = canvas.getContext("2d")
       if (ctx) {
         ctx.beginPath()
@@ -406,100 +408,108 @@ const rotateImage = useCallback((degrees: number) => {
 
     updateCursorStyle(x, y)
 
-    if (!cropMode || !cropStart) return
+    if (cropMode) {
+      if (!cropStart) return
 
-    if (cropState === 'creating') {
-      let endX = x
-      let endY = y
+      if (cropState === 'creating') {
+        let endX = x
+        let endY = y
 
-      if (cropGuide) {
-        const [ratioW, ratioH] = cropGuide.split(":").map(Number)
-        const targetRatio = ratioW / ratioH
+        if (cropGuide) {
+          const [ratioW, ratioH] = cropGuide.split(":").map(Number)
+          const targetRatio = ratioW / ratioH
 
-        const width = Math.abs(x - cropStart.x)
-        const height = Math.abs(y - cropStart.y)
+          const width = Math.abs(x - cropStart.x)
+          const height = Math.abs(y - cropStart.y)
 
-        if (width / height > targetRatio) {
-          endY = cropStart.y + (y > cropStart.y ? width / targetRatio : -width / targetRatio)
-        } else {
-          endX = cropStart.x + (x > cropStart.x ? height * targetRatio : -height * targetRatio)
+          if (width / height > targetRatio) {
+            endY = cropStart.y + (y > cropStart.y ? width / targetRatio : -width / targetRatio)
+          } else {
+            endX = cropStart.x + (x > cropStart.x ? height * targetRatio : -height * targetRatio)
+          }
+
+          const bounded = boundCoordinates(endX, endY, canvas)
+          endX = bounded.x
+          endY = bounded.y
         }
 
-        const bounded = boundCoordinates(endX, endY, canvas)
-        endX = bounded.x
-        endY = bounded.y
-      }
+        setCropEnd({ x: endX, y: endY })
+      } else if (cropState === 'moving' && dragOffset && cropEnd) {
+        const rect = getCropRect()
+        if (!rect) return
 
-      setCropEnd({ x: endX, y: endY })
-    } else if (cropState === 'moving' && dragOffset && cropEnd) {
-      const rect = getCropRect()
-      if (!rect) return
+        const newX = x - dragOffset.x
+        const newY = y - dragOffset.y
 
-      const newX = x - dragOffset.x
-      const newY = y - dragOffset.y
+        const boundedX = Math.max(0, Math.min(newX, canvas.width - rect.width))
+        const boundedY = Math.max(0, Math.min(newY, canvas.height - rect.height))
 
-      const boundedX = Math.max(0, Math.min(newX, canvas.width - rect.width))
-      const boundedY = Math.max(0, Math.min(newY, canvas.height - rect.height))
+        setCropStart({ x: boundedX, y: boundedY })
+        setCropEnd({ x: boundedX + rect.width, y: boundedY + rect.height })
+      } else if (cropState === 'resizing' && activeHandle && cropEnd) {
+        let newCropEnd = { ...cropEnd }
+        let newCropStart = { ...cropStart }
 
-      setCropStart({ x: boundedX, y: boundedY })
-      setCropEnd({ x: boundedX + rect.width, y: boundedY + rect.height })
-    } else if (cropState === 'resizing' && activeHandle && cropEnd) {
-      let newCropEnd = { ...cropEnd }
-      let newCropStart = { ...cropStart }
+        if (activeHandle.includes('e')) newCropEnd.x = x
+        if (activeHandle.includes('w')) newCropStart.x = x
+        if (activeHandle.includes('s')) newCropEnd.y = y
+        if (activeHandle.includes('n')) newCropStart.y = y
 
-      if (activeHandle.includes('e')) newCropEnd.x = x
-      if (activeHandle.includes('w')) newCropStart.x = x
-      if (activeHandle.includes('s')) newCropEnd.y = y
-      if (activeHandle.includes('n')) newCropStart.y = y
+        if (cropGuide) {
+          const [ratioW, ratioH] = cropGuide.split(':').map(Number)
+          const targetRatio = ratioW / ratioH
+          let width = newCropEnd.x - newCropStart.x
+          let height = newCropEnd.y - newCropStart.y
 
-      if (cropGuide) {
-        const [ratioW, ratioH] = cropGuide.split(':').map(Number)
-        const targetRatio = ratioW / ratioH
-        let width = newCropEnd.x - newCropStart.x
-        let height = newCropEnd.y - newCropStart.y
-
-        if (activeHandle === 'nw') {
-          if (Math.abs(width) / Math.abs(height) > targetRatio) {
-            newCropStart.x = newCropEnd.x - Math.abs(height) * targetRatio * (width < 0 ? -1 : 1)
-          } else {
-            newCropStart.y = newCropEnd.y - Math.abs(width) / targetRatio * (height < 0 ? -1 : 1)
-          }
-        } else if (activeHandle === 'ne') {
-          if (Math.abs(width) / Math.abs(height) > targetRatio) {
-            newCropEnd.x = newCropStart.x + Math.abs(height) * targetRatio * (width > 0 ? 1 : -1)
-          } else {
-            newCropStart.y = newCropEnd.y - Math.abs(width) / targetRatio * (height < 0 ? -1 : 1)
-          }
-        } else if (activeHandle === 'sw') {
-          if (Math.abs(width) / Math.abs(height) > targetRatio) {
-            newCropStart.x = newCropEnd.x - Math.abs(height) * targetRatio * (width < 0 ? -1 : 1)
-          } else {
-            newCropEnd.y = newCropStart.y + Math.abs(width) / targetRatio * (height > 0 ? 1 : -1)
-          }
-        } else if (activeHandle === 'se') {
-          if (Math.abs(width) / Math.abs(height) > targetRatio) {
-            newCropEnd.x = newCropStart.x + Math.abs(height) * targetRatio * (width > 0 ? 1 : -1)
-          } else {
-            newCropEnd.y = newCropStart.y + Math.abs(width) / targetRatio * (height > 0 ? 1 : -1)
+          if (activeHandle === 'nw') {
+            if (Math.abs(width) / Math.abs(height) > targetRatio) {
+              newCropStart.x = newCropEnd.x - Math.abs(height) * targetRatio * (width < 0 ? -1 : 1)
+            } else {
+              newCropStart.y = newCropEnd.y - Math.abs(width) / targetRatio * (height < 0 ? -1 : 1)
+            }
+          } else if (activeHandle === 'ne') {
+            if (Math.abs(width) / Math.abs(height) > targetRatio) {
+              newCropEnd.x = newCropStart.x + Math.abs(height) * targetRatio * (width > 0 ? 1 : -1)
+            } else {
+              newCropStart.y = newCropEnd.y - Math.abs(width) / targetRatio * (height < 0 ? -1 : 1)
+            }
+          } else if (activeHandle === 'sw') {
+            if (Math.abs(width) / Math.abs(height) > targetRatio) {
+              newCropStart.x = newCropEnd.x - Math.abs(height) * targetRatio * (width < 0 ? -1 : 1)
+            } else {
+              newCropEnd.y = newCropStart.y + Math.abs(width) / targetRatio * (height > 0 ? 1 : -1)
+            }
+          } else if (activeHandle === 'se') {
+            if (Math.abs(width) / Math.abs(height) > targetRatio) {
+              newCropEnd.x = newCropStart.x + Math.abs(height) * targetRatio * (width > 0 ? 1 : -1)
+            } else {
+              newCropEnd.y = newCropStart.y + Math.abs(width) / targetRatio * (height > 0 ? 1 : -1)
+            }
           }
         }
+
+        const boundedStartX = Math.max(0, Math.min(newCropStart.x, canvas.width))
+        const boundedStartY = Math.max(0, Math.min(newCropStart.y, canvas.height))
+        const boundedEndX = Math.max(0, Math.min(newCropEnd.x, canvas.width))
+        const boundedEndY = Math.max(0, Math.min(newCropEnd.y, canvas.height))
+
+        newCropStart = { x: boundedStartX, y: boundedStartY }
+        newCropEnd = { x: boundedEndX, y: boundedEndY }
+
+        setCropStart(newCropStart)
+        setCropEnd(newCropEnd)
       }
 
-      const boundedStartX = Math.max(0, Math.min(newCropStart.x, canvas.width))
-      const boundedStartY = Math.max(0, Math.min(newCropStart.y, canvas.height))
-      const boundedEndX = Math.max(0, Math.min(newCropEnd.x, canvas.width))
-      const boundedEndY = Math.max(0, Math.min(newCropEnd.y, canvas.height))
-
-      newCropStart = { x: boundedStartX, y: boundedStartY }
-      newCropEnd = { x: boundedEndX, y: boundedEndY }
-
-      setCropStart(newCropStart)
-      setCropEnd(newCropEnd)
+      requestAnimationFrame(drawCropOverlay)
+    } else if (isDrawing) {
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.lineTo(x, y)
+        ctx.stroke()
+      }
     }
-
-    requestAnimationFrame(drawCropOverlay)
     e.preventDefault()
-  }, [cropMode, cropStart, cropEnd, cropState, cropGuide, dragOffset, activeHandle, getCropRect, boundCoordinates, updateCursorStyle, drawCropOverlay, getCanvasCoordinates])
+  }, [cropMode, cropStart, cropEnd, cropState, cropGuide, dragOffset, activeHandle, getCropRect, boundCoordinates, updateCursorStyle, drawCropOverlay, getCanvasCoordinates, isDrawing])
 
   const handleEnd = useCallback(() => {
     if (cropState === 'creating') {
@@ -510,8 +520,12 @@ const rotateImage = useCallback((degrees: number) => {
     } else if (cropState === 'resizing') {
       setCropState('set')
       setActiveHandle(null)
-      }
-  }, [cropState])
+    }
+    if (isDrawing) {
+      saveCanvasState()
+      setIsDrawing(false)
+    }
+  }, [cropState, isDrawing, saveCanvasState])
 
   const applyCrop = useCallback(() => {
       const canvas = canvasRef.current
