@@ -17,34 +17,58 @@ export default function HomePage() {
   const [cropStart, setCropStart] = useState<{ x: number; y: number } | null>(null)
   const [cropEnd, setCropEnd] = useState<{ x: number; y: number } | null>(null)
   const [cropState, setCropState] = useState<CropState>('inactive')
-  const [isDrawing, setIsDrawing] = useState(false)
   const [cropGuide, setCropGuide] = useState<string | null>(null)
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null)
   const [activeHandle, setActiveHandle] = useState<ResizeHandle>(null)
   const [cursorStyle, setCursorStyle] = useState('default')
   const [lastTouchTime, setLastTouchTime] = useState<{ [key: string]: number }>({})
+  const [aspectRatios, setAspectRatios] = useState<{ [key: string]: string }>({})
+  const [history, setHistory] = useState<ImageData[]>([])
+  const [historyIndex, setHistoryIndex] = useState(-1)
 
-  const saveImageData = useCallback(() => {
+  const saveCanvasState = useCallback(() => {
     const canvas = canvasRef.current
     if (canvas) {
       const ctx = canvas.getContext("2d")
       if (ctx) {
-        setImageData(ctx.getImageData(0, 0, canvas.width, canvas.height))
+        const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        setHistory(prev => {
+          const newHistory = prev.slice(0, historyIndex + 1)
+          newHistory.push(currentImageData)
+          return newHistory
+        })
+        setHistoryIndex(prev => prev + 1)
+      }
+    }
+  }, [historyIndex])
+
+  const restoreCanvasState = useCallback((state: ImageData) => {
+    const canvas = canvasRef.current
+    if (canvas) {
+      const ctx = canvas.getContext("2d")
+      if (ctx) {
+        canvas.width = state.width
+        canvas.height = state.height
+        ctx.putImageData(state, 0, 0)
       }
     }
   }, [])
 
-  const restoreImageData = useCallback(() => {
-    const canvas = canvasRef.current
-    if (canvas && imageData) {
-      const ctx = canvas.getContext("2d")
-      if (ctx) {
-        canvas.width = imageData.width
-        canvas.height = imageData.height
-        ctx.putImageData(imageData, 0, 0)
-      }
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1
+      setHistoryIndex(newIndex)
+      restoreCanvasState(history[newIndex])
     }
-  }, [imageData])
+  }, [history, historyIndex, restoreCanvasState])
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1
+      setHistoryIndex(newIndex)
+      restoreCanvasState(history[newIndex])
+    }
+  }, [history, historyIndex, restoreCanvasState])
 
   const flipAspectRatio = useCallback((ratio: string) => {
     if (ratio === "1:1") return "1:1"
@@ -52,37 +76,46 @@ export default function HomePage() {
     return `${h}:${w}`
   }, [])
 
-  const handleCropButtonClick = useCallback((ratio: string, isDoubleClick = false) => {
-    const finalRatio = isDoubleClick ? flipAspectRatio(ratio) : ratio
-    setCropMode(true)
-    setCropGuide(finalRatio)
-    setCropState('inactive')
-    saveImageData()
-  }, [flipAspectRatio, saveImageData])
+    const handleCropButtonClick = useCallback((ratio: string) => {
+        setCropMode(true)
+        setCropGuide(ratio)
+        setCropStart(null)
+        setCropEnd(null)
+        setCropState('inactive')
+        setDragOffset(null)
+        setActiveHandle(null)
+
+        // Restore the original image without any crop overlay
+        if (history.length > 0) {
+            restoreCanvasState(history[historyIndex])
+        } else {
+            saveCanvasState()
+        }
+    }, [saveCanvasState, history, historyIndex, restoreCanvasState])
 
   const handleCropButtonDoubleClick = useCallback((ratio: string) => {
-    handleCropButtonClick(ratio, true)
-  }, [handleCropButtonClick])
+    const flippedRatio = flipAspectRatio(ratio)
+    setAspectRatios(prev => ({ ...prev, [ratio]: flippedRatio }))
+    handleCropButtonClick(flippedRatio)
+  }, [handleCropButtonClick, flipAspectRatio])
 
-  const handleCropButtonTouchEnd = useCallback((ratio: string, e: React.TouchEvent) => {
-    const now = Date.now()
-    const lastTouch = lastTouchTime[ratio] || 0
-    const timeDiff = now - lastTouch
-    
-    setLastTouchTime(prev => ({ ...prev, [ratio]: now }))
-    
-    if (timeDiff < 300) {
-      e.preventDefault()
-      handleCropButtonClick(ratio, true)
-    } else {
-      setTimeout(() => {
-        const currentTime = lastTouchTime[ratio] || 0
-        if (currentTime === now) {
-          handleCropButtonClick(ratio, false)
-        }
-      }, 300)
-    }
-  }, [lastTouchTime, handleCropButtonClick])
+const handleCropButtonTouchEnd = useCallback((ratio: string, e: React.TouchEvent) => {
+  e.preventDefault()
+  const now = Date.now()
+  const lastTouch = lastTouchTime[ratio] || 0
+
+  if (now - lastTouch < 300) {
+    // Double tap - flip aspect ratio
+    const flippedRatio = flipAspectRatio(aspectRatios[ratio] || ratio)
+    setAspectRatios(prev => ({ ...prev, [ratio]: flippedRatio }))
+    handleCropButtonClick(flippedRatio)
+  } else {
+    // Single tap - regular crop
+    handleCropButtonClick(aspectRatios[ratio] || ratio)
+  }
+
+  setLastTouchTime(prev => ({ ...prev, [ratio]: now }))
+}, [lastTouchTime, aspectRatios, handleCropButtonClick, flipAspectRatio])
 
   const cancelCrop = useCallback(() => {
     setCropMode(false)
@@ -93,39 +126,51 @@ export default function HomePage() {
     setDragOffset(null)
     setActiveHandle(null)
     setCursorStyle('default')
-    restoreImageData()
-  }, [restoreImageData])
-
-  const rotateImage = useCallback((degrees: number) => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-
-    const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-    const tempCanvas = document.createElement("canvas")
-    const tempCtx = tempCanvas.getContext("2d")
-    if (!tempCtx) return
-
-    if (degrees === 90 || degrees === 270) {
-      tempCanvas.width = canvas.height
-      tempCanvas.height = canvas.width
-      canvas.width = tempCanvas.width
-      canvas.height = tempCanvas.height
-    } else {
-      tempCanvas.width = canvas.width
-      tempCanvas.height = canvas.height
+    if (history.length > 0) {
+      restoreCanvasState(history[historyIndex])
     }
+  }, [history, historyIndex, restoreCanvasState])
 
-    tempCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2)
-    tempCtx.rotate((degrees * Math.PI) / 180)
-    tempCtx.putImageData(currentImageData, -currentImageData.width / 2, -currentImageData.height / 2)
+const rotateImage = useCallback((degrees: number) => {
+  const canvas = canvasRef.current
+  if (!canvas) return
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.drawImage(tempCanvas, 0, 0)
-    saveImageData()
-  }, [saveImageData])
+  const ctx = canvas.getContext("2d")
+  if (!ctx) return
+
+  saveCanvasState() // Save state before rotation
+
+  const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const tempCanvas = document.createElement("canvas")
+  const tempCtx = tempCanvas.getContext("2d")
+  if (!tempCtx) return
+
+  // Calculate new dimensions for 90/270 degree rotations
+  if (degrees === 90 || degrees === 270) {
+    tempCanvas.width = canvas.height
+    tempCanvas.height = canvas.width
+  } else {
+    tempCanvas.width = canvas.width
+    tempCanvas.height = canvas.height
+  }
+
+  // Center the image during rotation
+  tempCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2)
+  tempCtx.rotate((degrees * Math.PI) / 180)
+  tempCtx.drawImage(
+    canvas,
+    -canvas.width / 2,
+    -canvas.height / 2,
+    canvas.width,
+    canvas.height
+  )
+
+  // Resize the main canvas to fit the rotated image
+  canvas.width = tempCanvas.width
+  canvas.height = tempCanvas.height
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.drawImage(tempCanvas, 0, 0)
+}, [saveCanvasState])
 
   const flipImage = useCallback((direction: "horizontal" | "vertical") => {
     const canvas = canvasRef.current
@@ -148,8 +193,8 @@ export default function HomePage() {
 
     ctx.putImageData(currentImageData, 0, 0)
     ctx.restore()
-    saveImageData()
-  }, [saveImageData])
+    saveCanvasState()
+  }, [saveCanvasState])
 
   const resizeImage = useCallback((newWidth: number, newHeight: number) => {
     const canvas = canvasRef.current
@@ -171,8 +216,8 @@ export default function HomePage() {
     canvas.height = newHeight
     ctx.clearRect(0, 0, newWidth, newHeight)
     ctx.drawImage(tempCanvas, 0, 0, newWidth, newHeight)
-    saveImageData()
-  }, [saveImageData])
+    saveCanvasState()
+  }, [saveCanvasState])
 
   const boundCoordinates = useCallback((x: number, y: number, canvas: HTMLCanvasElement) => {
     return {
@@ -238,7 +283,10 @@ export default function HomePage() {
 
   const drawCropOverlay = useCallback(() => {
     const canvas = canvasRef.current
-    if (!canvas || !imageData || !cropStart || !cropEnd) return
+    if (!canvas || history.length === 0 || !cropStart || !cropEnd) return
+
+    const imageData = history[historyIndex]
+    if (!imageData) return
 
     const ctx = canvas.getContext("2d")
     if (!ctx) return
@@ -281,7 +329,7 @@ export default function HomePage() {
     ctx.font = "12px Arial"
     ctx.textAlign = "center"
     ctx.fillText(`${Math.round(rect.width)} × ${Math.round(rect.height)}`, rect.x + rect.width/2, rect.y - 10)
-  }, [cropStart, cropEnd, imageData, getCropRect])
+  }, [cropStart, cropEnd, history, historyIndex, getCropRect])
 
   const getCanvasCoordinates = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current
@@ -314,8 +362,8 @@ export default function HomePage() {
     const { x, y } = getCanvasCoordinates(e)
 
     if (cropMode) {
-      if (!imageData) {
-        saveImageData()
+      if (history.length === 0) {
+        saveCanvasState()
       }
 
       if (cropState === 'inactive' || cropState === 'creating') {
@@ -340,11 +388,15 @@ export default function HomePage() {
         }
       }
     } else {
-      setIsDrawing(true)
+      const ctx = canvas.getContext("2d")
+      if (ctx) {
+        ctx.beginPath()
+        ctx.moveTo(x, y)
+      }
     }
 
     e.preventDefault()
-  }, [cropMode, cropState, imageData, saveImageData, getResizeHandle, isInsideCropArea, getCropRect, getCanvasCoordinates])
+  }, [cropMode, cropState, history, saveCanvasState, getResizeHandle, isInsideCropArea, getCropRect, getCanvasCoordinates])
 
   const handleMove = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current
@@ -392,13 +444,54 @@ export default function HomePage() {
       setCropStart({ x: boundedX, y: boundedY })
       setCropEnd({ x: boundedX + rect.width, y: boundedY + rect.height })
     } else if (cropState === 'resizing' && activeHandle && cropEnd) {
-      const newCropEnd = { ...cropEnd }
-      const newCropStart = { ...cropStart }
+      let newCropEnd = { ...cropEnd }
+      let newCropStart = { ...cropStart }
 
       if (activeHandle.includes('e')) newCropEnd.x = x
       if (activeHandle.includes('w')) newCropStart.x = x
       if (activeHandle.includes('s')) newCropEnd.y = y
       if (activeHandle.includes('n')) newCropStart.y = y
+
+      if (cropGuide) {
+        const [ratioW, ratioH] = cropGuide.split(':').map(Number)
+        const targetRatio = ratioW / ratioH
+        let width = newCropEnd.x - newCropStart.x
+        let height = newCropEnd.y - newCropStart.y
+
+        if (activeHandle === 'nw') {
+          if (Math.abs(width) / Math.abs(height) > targetRatio) {
+            newCropStart.x = newCropEnd.x - Math.abs(height) * targetRatio * (width < 0 ? -1 : 1)
+          } else {
+            newCropStart.y = newCropEnd.y - Math.abs(width) / targetRatio * (height < 0 ? -1 : 1)
+          }
+        } else if (activeHandle === 'ne') {
+          if (Math.abs(width) / Math.abs(height) > targetRatio) {
+            newCropEnd.x = newCropStart.x + Math.abs(height) * targetRatio * (width > 0 ? 1 : -1)
+          } else {
+            newCropStart.y = newCropEnd.y - Math.abs(width) / targetRatio * (height < 0 ? -1 : 1)
+          }
+        } else if (activeHandle === 'sw') {
+          if (Math.abs(width) / Math.abs(height) > targetRatio) {
+            newCropStart.x = newCropEnd.x - Math.abs(height) * targetRatio * (width < 0 ? -1 : 1)
+          } else {
+            newCropEnd.y = newCropStart.y + Math.abs(width) / targetRatio * (height > 0 ? 1 : -1)
+          }
+        } else if (activeHandle === 'se') {
+          if (Math.abs(width) / Math.abs(height) > targetRatio) {
+            newCropEnd.x = newCropStart.x + Math.abs(height) * targetRatio * (width > 0 ? 1 : -1)
+          } else {
+            newCropEnd.y = newCropStart.y + Math.abs(width) / targetRatio * (height > 0 ? 1 : -1)
+          }
+        }
+      }
+
+      const boundedStartX = Math.max(0, Math.min(newCropStart.x, canvas.width))
+      const boundedStartY = Math.max(0, Math.min(newCropStart.y, canvas.height))
+      const boundedEndX = Math.max(0, Math.min(newCropEnd.x, canvas.width))
+      const boundedEndY = Math.max(0, Math.min(newCropEnd.y, canvas.height))
+
+      newCropStart = { x: boundedStartX, y: boundedStartY }
+      newCropEnd = { x: boundedEndX, y: boundedEndY }
 
       setCropStart(newCropStart)
       setCropEnd(newCropEnd)
@@ -417,13 +510,11 @@ export default function HomePage() {
     } else if (cropState === 'resizing') {
       setCropState('set')
       setActiveHandle(null)
-    }
-
-    setIsDrawing(false)
+      }
   }, [cropState])
 
   const applyCrop = useCallback(() => {
-    const canvas = canvasRef.current
+      const canvas = canvasRef.current
     if (!canvas || !cropStart || !cropEnd) return
 
     const ctx = canvas.getContext("2d")
@@ -435,21 +526,32 @@ export default function HomePage() {
     const height = Math.abs(cropEnd.y - cropStart.y)
 
     if (width > 0 && height > 0) {
-      const croppedImageData = ctx.getImageData(x, y, width, height)
-      canvas.width = width
-      canvas.height = height
-      ctx.clearRect(0, 0, width, height)
-      ctx.putImageData(croppedImageData, 0, 0)
-      saveImageData()
+      const tempCanvas = document.createElement("canvas")
+      tempCanvas.width = width
+      tempCanvas.height = height
+      const tempCtx = tempCanvas.getContext("2d")
+      if (tempCtx) {
+        const imageData = ctx.getImageData(x, y, width, height)
+        tempCtx.putImageData(imageData, 0, 0)
+
+        // Resize main canvas
+        canvas.width = width
+        canvas.height = height
+        ctx.clearRect(0, 0, width, height)
+        ctx.drawImage(tempCanvas, 0, 0)
+        saveCanvasState()
+      }
     }
 
-    setCropMode(false)
-    setCropStart(null)
-    setCropEnd(null)
-    setCropGuide(null)
-    setCropState('inactive')
-  }, [cropStart, cropEnd, saveImageData])
-
+  // Reset all crop states
+  setCropMode(false)
+  setCropStart(null)
+  setCropEnd(null)
+  setCropGuide(null)
+  setCropState('inactive')
+  setDragOffset(null)
+  setActiveHandle(null)
+}, [cropStart, cropEnd, saveCanvasState])
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file && file.type.startsWith("image/")) {
@@ -480,7 +582,7 @@ export default function HomePage() {
               canvas.height = canvasHeight
               ctx.clearRect(0, 0, canvasWidth, canvasHeight)
               ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight)
-              saveImageData()
+              saveCanvasState()
             }
           }
         }
@@ -494,16 +596,18 @@ export default function HomePage() {
     fileInputRef.current?.click()
   }
 
-  const clearCanvas = () => {
-    const canvas = canvasRef.current
-    if (canvas) {
-      const ctx = canvas.getContext("2d")
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
-        setImageData(null)
-      }
+const clearCanvas = () => {
+  const canvas = canvasRef.current
+  if (canvas) {
+    const ctx = canvas.getContext("2d")
+    if (ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      setImageData(null)
+      setHistory([])
+      setHistoryIndex(-1)
     }
   }
+}
 
   const exportImage = () => {
     const canvas = canvasRef.current
@@ -635,6 +739,22 @@ export default function HomePage() {
                 >
                   ↕ Flip Vertical
                 </button>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button 
+                    style={{...outlineButtonStyle, flex: 1}}
+                    onClick={undo}
+                    disabled={historyIndex <= 0}
+                  >
+                    ↩️ Undo
+                  </button>
+                  <button 
+                    style={{...outlineButtonStyle, flex: 1}}
+                    onClick={redo}
+                    disabled={historyIndex >= history.length - 1}
+                  >
+                    ↪️ Redo
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -653,11 +773,13 @@ export default function HomePage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <button
                   style={cropMode ? primaryButtonStyle : outlineButtonStyle}
-                  onClick={() => {
+                                    onClick={() => {
                     if (!cropMode) {
                       setCropMode(true)
+                      setCropStart(null)
+                      setCropEnd(null)
                       setCropState('inactive')
-                      saveImageData()
+                      saveCanvasState()
                     } else {
                       cancelCrop()
                     }
@@ -678,30 +800,30 @@ export default function HomePage() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
                   {[
-                    { ratio: "1:1", label: "1:1" },
-                    { ratio: "4:3", label: cropGuide === "3:4" ? "3:4" : "4:3" },
-                    { ratio: "16:9", label: cropGuide === "9:16" ? "9:16" : "16:9" },
-                    { ratio: "9:21", label: cropGuide === "21:9" ? "21:9" : "9:21" },
-                    { ratio: "2:3", label: cropGuide === "3:2" ? "3:2" : "2:3" },
-                    { ratio: "4:5", label: cropGuide === "5:4" ? "5:4" : "4:5" }
-                  ].map(({ ratio, label }) => (
+                    { ratio: "1:1" },
+                    { ratio: "4:3" },
+                    { ratio: "16:9" },
+                    { ratio: "9:21" },
+                    { ratio: "2:3" },
+                    { ratio: "4:5" }
+                  ].map(({ ratio }) => (
                     <button
                       key={ratio}
                       style={{
                         ...buttonStyle,
                         fontSize: '12px',
                         padding: '8px 12px',
-                        backgroundColor: cropGuide?.includes(ratio.split(':')[0]) && cropGuide?.includes(ratio.split(':')[1]) 
+                        backgroundColor: cropGuide === (aspectRatios[ratio] || ratio)
                           ? '#007bff' : 'white',
-                        color: cropGuide?.includes(ratio.split(':')[0]) && cropGuide?.includes(ratio.split(':')[1]) 
+                        color: cropGuide === (aspectRatios[ratio] || ratio)
                           ? 'white' : '#333',
                         border: '1px solid #ddd'
                       }}
-                      onClick={() => handleCropButtonClick(ratio)}
+                      onClick={() => handleCropButtonClick(aspectRatios[ratio] || ratio)}
                       onDoubleClick={() => handleCropButtonDoubleClick(ratio)}
                       onTouchEnd={(e) => handleCropButtonTouchEnd(ratio, e)}
                     >
-                      {label}
+                      {aspectRatios[ratio] || ratio}
                     </button>
                   ))}
                 </div>
