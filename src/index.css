@@ -10,46 +10,91 @@
   }
 }
 
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  background: transparent;
-  cursor: pointer;
-  width: 100%;
-}
-
 input[type="range"]:focus {
   outline: none;
 }
 
-input[type="range"]::-webkit-slider-runnable-track {
-  background-color: #e5e7eb;
-  border-radius: 0.5rem;
-  height: 0.5rem;
-}
+@layer components {
+  .btn {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
 
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  margin-top: -0.25rem;
-  background-color: #ffffff;
-  border-radius: 50%;
-  height: 1rem;
-  width: 1rem;
-  border: 2px solid #9ca3af;
-}
+  .btn-primary {
+    background-color: #2563eb;
+    color: #ffffff;
+  }
 
-input[type="range"]:focus::-webkit-slider-thumb {
-  outline: 2px solid #60a5fa;
-  outline-offset: 2px;
-}
+  .btn-primary:hover {
+    background-color: #1d4ed8;
+  }
 
-.accent-cyan-600::-webkit-slider-thumb {
-  background-color: #0891b2;
-  border-color: #0891b2;
-}
+  .btn-secondary {
+    background-color: #4b5563;
+    color: #ffffff;
+  }
 
-.accent-amber-500::-webkit-slider-thumb {
-  background-color: #f59e0b;
-  border-color: #f59e0b;
+  .btn-secondary:hover {
+    background-color: #374151;
+  }
+
+  .btn-outline {
+    background-color: #ffffff;
+    color: #1f2937;
+    border: 1px solid #d1d5db;
+  }
+
+  .btn-outline:hover {
+    background-color: #f9fafb;
+  }
+
+  .btn-destructive {
+    background-color: #dc2626;
+    color: #ffffff;
+  }
+
+  .btn-destructive:hover {
+    background-color: #b91c1c;
+  }
+
+  .btn-ratio {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    border-radius: 0.25rem;
+    border: 1px solid #d1d5db;
+    background-color: #ffffff;
+    color: #1f2937;
+  }
+
+  .btn-ratio:hover {
+    background-color: #f9fafb;
+  }
+
+  .btn-ratio-active {
+    background-color: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+  }
+
+  .btn-ratio-active:hover {
+    background-color: #1d4ed8;
+  }
 }

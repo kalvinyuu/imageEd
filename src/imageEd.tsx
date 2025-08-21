@@ -1,768 +1,890 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useRef, useState, useCallback } from "react"
+import { useRef, useState, useCallback } from "react";
 
-type CropState = 'inactive' | 'creating' | 'set' | 'moving' | 'resizing'
-type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se' | null
+type CropState = "inactive" | "creating" | "set" | "moving" | "resizing";
+type ResizeHandle = "nw" | "ne" | "sw" | "se" | null;
 
 export default function HomePage() {
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [currentTool, setCurrentTool] = useState("pencil")
-  const [currentColor, setCurrentColor] = useState("#000000")
-  const [brushSize, setBrushSize] = useState(5)
-  const [imageData, setImageData] = useState<ImageData | null>(null)
-  const [cropMode, setCropMode] = useState(false)
-  const [cropStart, setCropStart] = useState<{ x: number; y: number } | null>(null)
-  const [cropEnd, setCropEnd] = useState<{ x: number; y: number } | null>(null)
-  const [cropState, setCropState] = useState<CropState>('inactive')
-  const [isDrawing, setIsDrawing] = useState(false)
-  const [cropGuide, setCropGuide] = useState<string | null>(null)
-  const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null)
-  const [activeHandle, setActiveHandle] = useState<ResizeHandle>(null)
-  const [cursorStyle, setCursorStyle] = useState('default')
-  const [lastTouchTime, setLastTouchTime] = useState<{ [key: string]: number }>({})
-  const [aspectRatios, setAspectRatios] = useState<{ [key: string]: string }>({})
-  const [history, setHistory] = useState<ImageData[]>([])
-  const [historyIndex, setHistoryIndex] = useState(-1)
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [currentTool, setCurrentTool] = useState("pencil");
+  const [currentColor, setCurrentColor] = useState("#000000");
+  const [brushSize, setBrushSize] = useState(5);
+  const [imageData, setImageData] = useState<ImageData | null>(null);
+  const [cropMode, setCropMode] = useState(false);
+  const [cropStart, setCropStart] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const [cropEnd, setCropEnd] = useState<{ x: number; y: number } | null>(null);
+  const [cropState, setCropState] = useState<CropState>("inactive");
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [cropGuide, setCropGuide] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const [activeHandle, setActiveHandle] = useState<ResizeHandle>(null);
+  const [cursorStyle, setCursorStyle] = useState("default");
+  const [lastTouchTime, setLastTouchTime] = useState<{ [key: string]: number }>(
+    {},
+  );
+  const [aspectRatios, setAspectRatios] = useState<{ [key: string]: string }>(
+    {},
+  );
+  const [history, setHistory] = useState<ImageData[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
+  const [customRatioX, setCustomRatioX] = useState("2");
+  const [customRatioY, setCustomRatioY] = useState("1");
+  const [customWidth, setCustomWidth] = useState("1920");
+  const [customHeight, setCustomHeight] = useState("1080");
 
   const saveCanvasState = useCallback(() => {
-    const canvas = canvasRef.current
+    const canvas = canvasRef.current;
     if (canvas) {
-      const ctx = canvas.getContext("2d")
+      const ctx = canvas.getContext("2d");
       if (ctx) {
-        const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-        setHistory(prev => {
-          const newHistory = prev.slice(0, historyIndex + 1)
-          newHistory.push(currentImageData)
-          return newHistory
-        })
-        setHistoryIndex(prev => prev + 1)
+        const currentImageData = ctx.getImageData(
+          0,
+          0,
+          canvas.width,
+          canvas.height,
+        );
+        setHistory((prev) => {
+          const newHistory = prev.slice(0, historyIndex + 1);
+          newHistory.push(currentImageData);
+          return newHistory;
+        });
+        setHistoryIndex((prev) => prev + 1);
       }
     }
-  }, [historyIndex])
+  }, [historyIndex]);
 
   const restoreCanvasState = useCallback((state: ImageData) => {
-    const canvas = canvasRef.current
+    const canvas = canvasRef.current;
     if (canvas) {
-      const ctx = canvas.getContext("2d")
+      const ctx = canvas.getContext("2d");
       if (ctx) {
-        canvas.width = state.width
-        canvas.height = state.height
-        ctx.putImageData(state, 0, 0)
+        canvas.width = state.width;
+        canvas.height = state.height;
+        ctx.putImageData(state, 0, 0);
       }
     }
-  }, [])
+  }, []);
 
   const undo = useCallback(() => {
     if (historyIndex > 0) {
-      const newIndex = historyIndex - 1
-      setHistoryIndex(newIndex)
-      restoreCanvasState(history[newIndex])
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      restoreCanvasState(history[newIndex]);
     }
-  }, [history, historyIndex, restoreCanvasState])
+  }, [history, historyIndex, restoreCanvasState]);
 
   const redo = useCallback(() => {
     if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1
-      setHistoryIndex(newIndex)
-      restoreCanvasState(history[newIndex])
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      restoreCanvasState(history[newIndex]);
     }
-  }, [history, historyIndex, restoreCanvasState])
+  }, [history, historyIndex, restoreCanvasState]);
 
   const flipAspectRatio = useCallback((ratio: string) => {
-    if (ratio === "1:1") return "1:1"
-    const [w, h] = ratio.split(":").map(Number)
-    return `${h}:${w}`
-  }, [])
+    if (ratio === "1:1") return "1:1";
+    const [w, h] = ratio.split(":").map(Number);
+    return `${h}:${w}`;
+  }, []);
 
-    const handleCropButtonClick = useCallback((ratio: string) => {
-        setCropMode(true)
-        setCropGuide(ratio)
-        setCropStart(null)
-        setCropEnd(null)
-        setCropState('inactive')
-        setDragOffset(null)
-        setActiveHandle(null)
+  const handleCropButtonClick = useCallback(
+    (ratio: string) => {
+      setCropMode(true);
+      setCropGuide(ratio);
+      setCropStart(null);
+      setCropEnd(null);
+      setCropState("inactive");
+      setDragOffset(null);
+      setActiveHandle(null);
 
-        // Restore the original image without any crop overlay
-        if (history.length > 0) {
-            restoreCanvasState(history[historyIndex])
-        } else {
-            saveCanvasState()
-        }
-    }, [saveCanvasState, history, historyIndex, restoreCanvasState])
+      // Restore the original image without any crop overlay
+      if (history.length > 0) {
+        restoreCanvasState(history[historyIndex]);
+      } else {
+        saveCanvasState();
+      }
+    },
+    [saveCanvasState, history, historyIndex, restoreCanvasState],
+  );
 
-  const handleCropButtonDoubleClick = useCallback((ratio: string) => {
-    const flippedRatio = flipAspectRatio(ratio)
-    setAspectRatios(prev => ({ ...prev, [ratio]: flippedRatio }))
-    handleCropButtonClick(flippedRatio)
-  }, [handleCropButtonClick, flipAspectRatio])
+  const handleCropButtonDoubleClick = useCallback(
+    (ratio: string) => {
+      const flippedRatio = flipAspectRatio(ratio);
+      setAspectRatios((prev) => ({ ...prev, [ratio]: flippedRatio }));
+      handleCropButtonClick(flippedRatio);
+    },
+    [handleCropButtonClick, flipAspectRatio],
+  );
 
-const handleCropButtonTouchEnd = useCallback((ratio: string, e: React.TouchEvent) => {
-  e.preventDefault()
-  const now = Date.now()
-  const lastTouch = lastTouchTime[ratio] || 0
+  const handleCropButtonTouchEnd = useCallback(
+    (ratio: string, e: React.TouchEvent) => {
+      e.preventDefault();
+      const now = Date.now();
+      const lastTouch = lastTouchTime[ratio] || 0;
 
-  if (now - lastTouch < 300) {
-    // Double tap - flip aspect ratio
-    const flippedRatio = flipAspectRatio(aspectRatios[ratio] || ratio)
-    setAspectRatios(prev => ({ ...prev, [ratio]: flippedRatio }))
-    handleCropButtonClick(flippedRatio)
-  } else {
-    // Single tap - regular crop
-    handleCropButtonClick(aspectRatios[ratio] || ratio)
-  }
+      if (now - lastTouch < 300) {
+        // Double tap - flip aspect ratio
+        const flippedRatio = flipAspectRatio(aspectRatios[ratio] || ratio);
+        setAspectRatios((prev) => ({ ...prev, [ratio]: flippedRatio }));
+        handleCropButtonClick(flippedRatio);
+      } else {
+        // Single tap - regular crop
+        handleCropButtonClick(aspectRatios[ratio] || ratio);
+      }
 
-  setLastTouchTime(prev => ({ ...prev, [ratio]: now }))
-}, [lastTouchTime, aspectRatios, handleCropButtonClick, flipAspectRatio])
+      setLastTouchTime((prev) => ({ ...prev, [ratio]: now }));
+    },
+    [lastTouchTime, aspectRatios, handleCropButtonClick, flipAspectRatio],
+  );
 
   const cancelCrop = useCallback(() => {
-    setCropMode(false)
-    setCropStart(null)
-    setCropEnd(null)
-    setCropGuide(null)
-    setCropState('inactive')
-    setDragOffset(null)
-    setActiveHandle(null)
-    setCursorStyle('default')
+    setCropMode(false);
+    setCropStart(null);
+    setCropEnd(null);
+    setCropGuide(null);
+    setCropState("inactive");
+    setDragOffset(null);
+    setActiveHandle(null);
+    setCursorStyle("default");
     if (history.length > 0) {
-      restoreCanvasState(history[historyIndex])
+      restoreCanvasState(history[historyIndex]);
     }
-  }, [history, historyIndex, restoreCanvasState])
+  }, [history, historyIndex, restoreCanvasState]);
 
-const rotateImage = useCallback((degrees: number) => {
-  const canvas = canvasRef.current
-  if (!canvas) return
+  const rotateImage = useCallback(
+    (degrees: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-  const ctx = canvas.getContext("2d")
-  if (!ctx) return
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-  saveCanvasState() // Save state before rotation
+      saveCanvasState(); // Save state before rotation
 
-  const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-  const tempCanvas = document.createElement("canvas")
-  const tempCtx = tempCanvas.getContext("2d")
-  if (!tempCtx) return
+      const currentImageData = ctx.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
+      const tempCanvas = document.createElement("canvas");
+      const tempCtx = tempCanvas.getContext("2d");
+      if (!tempCtx) return;
 
-  // Calculate new dimensions for 90/270 degree rotations
-  if (degrees === 90 || degrees === 270) {
-    tempCanvas.width = canvas.height
-    tempCanvas.height = canvas.width
-  } else {
-    tempCanvas.width = canvas.width
-    tempCanvas.height = canvas.height
-  }
+      // Calculate new dimensions for 90/270 degree rotations
+      if (degrees === 90 || degrees === 270) {
+        tempCanvas.width = canvas.height;
+        tempCanvas.height = canvas.width;
+      } else {
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+      }
 
-  // Center the image during rotation
-  tempCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2)
-  tempCtx.rotate((degrees * Math.PI) / 180)
-  tempCtx.drawImage(
-    canvas,
-    -canvas.width / 2,
-    -canvas.height / 2,
-    canvas.width,
-    canvas.height
-  )
+      // Center the image during rotation
+      tempCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
+      tempCtx.rotate((degrees * Math.PI) / 180);
+      tempCtx.drawImage(
+        canvas,
+        -canvas.width / 2,
+        -canvas.height / 2,
+        canvas.width,
+        canvas.height,
+      );
 
-  // Resize the main canvas to fit the rotated image
-  canvas.width = tempCanvas.width
-  canvas.height = tempCanvas.height
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
-  ctx.drawImage(tempCanvas, 0, 0)
-}, [saveCanvasState])
+      // Resize the main canvas to fit the rotated image
+      canvas.width = tempCanvas.width;
+      canvas.height = tempCanvas.height;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(tempCanvas, 0, 0);
+    },
+    [saveCanvasState],
+  );
 
-  const flipImage = useCallback((direction: "horizontal" | "vertical") => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+  const flipImage = useCallback(
+    (direction: "horizontal" | "vertical") => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-    const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.save()
+      const currentImageData = ctx.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
 
-    if (direction === "horizontal") {
-      ctx.scale(-1, 1)
-      ctx.translate(-canvas.width, 0)
-    } else {
-      ctx.scale(1, -1)
-      ctx.translate(0, -canvas.height)
-    }
+      if (direction === "horizontal") {
+        ctx.scale(-1, 1);
+        ctx.translate(-canvas.width, 0);
+      } else {
+        ctx.scale(1, -1);
+        ctx.translate(0, -canvas.height);
+      }
 
-    ctx.putImageData(currentImageData, 0, 0)
-    ctx.restore()
-    saveCanvasState()
-  }, [saveCanvasState])
+      ctx.putImageData(currentImageData, 0, 0);
+      ctx.restore();
+      saveCanvasState();
+    },
+    [saveCanvasState],
+  );
 
-  const resizeImage = useCallback((newWidth: number, newHeight: number) => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+  const resizeImage = useCallback(
+    (newWidth: number, newHeight: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-    const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-    const tempCanvas = document.createElement("canvas")
-    const tempCtx = tempCanvas.getContext("2d")
-    if (!tempCtx) return
+      const currentImageData = ctx.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
+      const tempCanvas = document.createElement("canvas");
+      const tempCtx = tempCanvas.getContext("2d");
+      if (!tempCtx) return;
 
-    tempCanvas.width = canvas.width
-    tempCanvas.height = canvas.height
-    tempCtx.putImageData(currentImageData, 0, 0)
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      tempCtx.putImageData(currentImageData, 0, 0);
 
-    canvas.width = newWidth
-    canvas.height = newHeight
-    ctx.clearRect(0, 0, newWidth, newHeight)
-    ctx.drawImage(tempCanvas, 0, 0, newWidth, newHeight)
-    saveCanvasState()
-  }, [saveCanvasState])
+      canvas.width = newWidth;
+      canvas.height = newHeight;
+      ctx.clearRect(0, 0, newWidth, newHeight);
+      ctx.drawImage(tempCanvas, 0, 0, newWidth, newHeight);
+      saveCanvasState();
+    },
+    [saveCanvasState],
+  );
 
-  const boundCoordinates = useCallback((x: number, y: number, canvas: HTMLCanvasElement) => {
-    return {
-      x: Math.max(0, Math.min(x, canvas.width)),
-      y: Math.max(0, Math.min(y, canvas.height))
-    }
-  }, [])
+  const boundCoordinates = useCallback(
+    (x: number, y: number, canvas: HTMLCanvasElement) => {
+      return {
+        x: Math.max(0, Math.min(x, canvas.width)),
+        y: Math.max(0, Math.min(y, canvas.height)),
+      };
+    },
+    [],
+  );
 
   const getCropRect = useCallback(() => {
-    if (!cropStart || !cropEnd) return null
-    
-    const x = Math.min(cropStart.x, cropEnd.x)
-    const y = Math.min(cropStart.y, cropEnd.y)
-    const width = Math.abs(cropEnd.x - cropStart.x)
-    const height = Math.abs(cropEnd.y - cropStart.y)
-    
-    return { x, y, width, height }
-  }, [cropStart, cropEnd])
+    if (!cropStart || !cropEnd) return null;
 
-  const getResizeHandle = useCallback((mouseX: number, mouseY: number): ResizeHandle => {
-    const rect = getCropRect()
-    if (!rect) return null
+    const x = Math.min(cropStart.x, cropEnd.x);
+    const y = Math.min(cropStart.y, cropEnd.y);
+    const width = Math.abs(cropEnd.x - cropStart.x);
+    const height = Math.abs(cropEnd.y - cropStart.y);
 
-    const tolerance = 6
+    return { x, y, width, height };
+  }, [cropStart, cropEnd]);
 
-    if (Math.abs(mouseX - rect.x) <= tolerance && Math.abs(mouseY - rect.y) <= tolerance) return 'nw'
-    if (Math.abs(mouseX - (rect.x + rect.width)) <= tolerance && Math.abs(mouseY - rect.y) <= tolerance) return 'ne'
-    if (Math.abs(mouseX - rect.x) <= tolerance && Math.abs(mouseY - (rect.y + rect.height)) <= tolerance) return 'sw'
-    if (Math.abs(mouseX - (rect.x + rect.width)) <= tolerance && Math.abs(mouseY - (rect.y + rect.height)) <= tolerance) return 'se'
+  const getResizeHandle = useCallback(
+    (mouseX: number, mouseY: number): ResizeHandle => {
+      const rect = getCropRect();
+      if (!rect) return null;
 
-    return null
-  }, [getCropRect])
+      const tolerance = 6;
 
-  const isInsideCropArea = useCallback((mouseX: number, mouseY: number) => {
-    const rect = getCropRect()
-    if (!rect) return false
+      if (
+        Math.abs(mouseX - rect.x) <= tolerance &&
+        Math.abs(mouseY - rect.y) <= tolerance
+      )
+        return "nw";
+      if (
+        Math.abs(mouseX - (rect.x + rect.width)) <= tolerance &&
+        Math.abs(mouseY - rect.y) <= tolerance
+      )
+        return "ne";
+      if (
+        Math.abs(mouseX - rect.x) <= tolerance &&
+        Math.abs(mouseY - (rect.y + rect.height)) <= tolerance
+      )
+        return "sw";
+      if (
+        Math.abs(mouseX - (rect.x + rect.width)) <= tolerance &&
+        Math.abs(mouseY - (rect.y + rect.height)) <= tolerance
+      )
+        return "se";
 
-    return mouseX >= rect.x && mouseX <= rect.x + rect.width && 
-           mouseY >= rect.y && mouseY <= rect.y + rect.height
-  }, [getCropRect])
+      return null;
+    },
+    [getCropRect],
+  );
 
-  const updateCursorStyle = useCallback((mouseX: number, mouseY: number) => {
-    if (!cropMode || cropState === 'creating') {
-      setCursorStyle('crosshair')
-      return
-    }
+  const isInsideCropArea = useCallback(
+    (mouseX: number, mouseY: number) => {
+      const rect = getCropRect();
+      if (!rect) return false;
 
-    const handle = getResizeHandle(mouseX, mouseY)
-    if (handle) {
-      const cursors = {
-        'nw': 'nw-resize',
-        'ne': 'ne-resize',
-        'sw': 'sw-resize',
-        'se': 'se-resize'
+      return (
+        mouseX >= rect.x &&
+        mouseX <= rect.x + rect.width &&
+        mouseY >= rect.y &&
+        mouseY <= rect.y + rect.height
+      );
+    },
+    [getCropRect],
+  );
+
+  const updateCursorStyle = useCallback(
+    (mouseX: number, mouseY: number) => {
+      if (!cropMode || cropState === "creating") {
+        setCursorStyle("crosshair");
+        return;
       }
-      setCursorStyle(cursors[handle])
-    } else if (isInsideCropArea(mouseX, mouseY)) {
-      setCursorStyle('move')
-    } else {
-      setCursorStyle('crosshair')
-    }
-  }, [cropMode, cropState, getResizeHandle, isInsideCropArea])
+
+      const handle = getResizeHandle(mouseX, mouseY);
+      if (handle) {
+        const cursors = {
+          nw: "nw-resize",
+          ne: "ne-resize",
+          sw: "sw-resize",
+          se: "se-resize",
+        };
+        setCursorStyle(cursors[handle]);
+      } else if (isInsideCropArea(mouseX, mouseY)) {
+        setCursorStyle("move");
+      } else {
+        setCursorStyle("crosshair");
+      }
+    },
+    [cropMode, cropState, getResizeHandle, isInsideCropArea],
+  );
 
   const drawCropOverlay = useCallback(() => {
-    const canvas = canvasRef.current
-    if (!canvas || history.length === 0 || !cropStart || !cropEnd) return
+    const canvas = canvasRef.current;
+    if (!canvas || history.length === 0 || !cropStart || !cropEnd) return;
 
-    const imageData = history[historyIndex]
-    if (!imageData) return
+    const imageData = history[historyIndex];
+    if (!imageData) return;
 
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-    ctx.putImageData(imageData, 0, 0)
+    ctx.putImageData(imageData, 0, 0);
 
-    const rect = getCropRect()
-    if (!rect) return
+    const rect = getCropRect();
+    if (!rect) return;
 
-    ctx.fillStyle = "rgba(0, 0, 0, 0.5)"
-    ctx.fillRect(0, 0, canvas.width, rect.y)
-    ctx.fillRect(0, rect.y + rect.height, canvas.width, canvas.height - rect.y - rect.height)
-    ctx.fillRect(0, rect.y, rect.x, rect.height)
-    ctx.fillRect(rect.x + rect.width, rect.y, canvas.width - rect.x - rect.width, rect.height)
+    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.fillRect(0, 0, canvas.width, rect.y);
+    ctx.fillRect(
+      0,
+      rect.y + rect.height,
+      canvas.width,
+      canvas.height - rect.y - rect.height,
+    );
+    ctx.fillRect(0, rect.y, rect.x, rect.height);
+    ctx.fillRect(
+      rect.x + rect.width,
+      rect.y,
+      canvas.width - rect.x - rect.width,
+      rect.height,
+    );
 
-    ctx.strokeStyle = "#00ff00"
-    ctx.lineWidth = 2
-    ctx.setLineDash([5, 5])
-    ctx.strokeRect(rect.x, rect.y, rect.width, rect.height)
-    ctx.setLineDash([])
+    ctx.strokeStyle = "#00ff00";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+    ctx.setLineDash([]);
 
-    const handleSize = 12
-    ctx.fillStyle = "#00ff00"
-    ctx.strokeStyle = "#ffffff"
-    ctx.lineWidth = 2
+    const handleSize = 12;
+    ctx.fillStyle = "#00ff00";
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2;
 
     const corners = [
       { x: rect.x, y: rect.y },
       { x: rect.x + rect.width, y: rect.y },
       { x: rect.x, y: rect.y + rect.height },
-      { x: rect.x + rect.width, y: rect.y + rect.height }
-    ]
+      { x: rect.x + rect.width, y: rect.y + rect.height },
+    ];
 
-    corners.forEach(corner => {
-      ctx.fillRect(corner.x - handleSize/2, corner.y - handleSize/2, handleSize, handleSize)
-      ctx.strokeRect(corner.x - handleSize/2, corner.y - handleSize/2, handleSize, handleSize)
-    })
+    corners.forEach((corner) => {
+      ctx.fillRect(
+        corner.x - handleSize / 2,
+        corner.y - handleSize / 2,
+        handleSize,
+        handleSize,
+      );
+      ctx.strokeRect(
+        corner.x - handleSize / 2,
+        corner.y - handleSize / 2,
+        handleSize,
+        handleSize,
+      );
+    });
 
-    ctx.fillStyle = "#00ff00"
-    ctx.font = "12px Arial"
-    ctx.textAlign = "center"
-    ctx.fillText(`${Math.round(rect.width)} × ${Math.round(rect.height)}`, rect.x + rect.width/2, rect.y - 10)
-  }, [cropStart, cropEnd, history, historyIndex, getCropRect])
+    ctx.fillStyle = "#00ff00";
+    ctx.font = "12px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(
+      `${Math.round(rect.width)} × ${Math.round(rect.height)}`,
+      rect.x + rect.width / 2,
+      rect.y - 10,
+    );
+  }, [cropStart, cropEnd, history, historyIndex, getCropRect]);
 
-  const getCanvasCoordinates = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current
-    if (!canvas) return { x: 0, y: 0 }
+  const getCanvasCoordinates = useCallback(
+    (
+      e:
+        | React.MouseEvent<HTMLCanvasElement>
+        | React.TouchEvent<HTMLCanvasElement>,
+    ) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return { x: 0, y: 0 };
 
-    const rect = canvas.getBoundingClientRect()
-    
-    let clientX: number, clientY: number
-    
-    if ('touches' in e && e.touches.length > 0) {
-      clientX = e.touches[0].clientX
-      clientY = e.touches[0].clientY
-    } else if ('clientX' in e) {
-      clientX = e.clientX
-      clientY = e.clientY
-    } else {
-      return { x: 0, y: 0 }
-    }
+      const rect = canvas.getBoundingClientRect();
 
-    const x = (clientX - rect.left) * (canvas.width / rect.width)
-    const y = (clientY - rect.top) * (canvas.height / rect.height)
+      let clientX: number, clientY: number;
 
-    return boundCoordinates(x, y, canvas)
-  }, [boundCoordinates])
-
-  const handleStart = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const { x, y } = getCanvasCoordinates(e)
-
-    if (cropMode) {
-      if (history.length === 0) {
-        saveCanvasState()
+      if ("touches" in e && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else if ("clientX" in e) {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      } else {
+        return { x: 0, y: 0 };
       }
 
-      if (cropState === 'inactive' || cropState === 'creating') {
-        setCropStart({ x, y })
-        setCropEnd({ x, y })
-        setCropState('creating')
-      } else if (cropState === 'set') {
-        const handle = getResizeHandle(x, y)
-        if (handle) {
-          setActiveHandle(handle)
-          setCropState('resizing')
-        } else if (isInsideCropArea(x, y)) {
-          const rect = getCropRect()
-          if (rect) {
-            setDragOffset({ x: x - rect.x, y: y - rect.y })
-            setCropState('moving')
-          }
-        } else {
-          setCropStart({ x, y })
-          setCropEnd({ x, y })
-          setCropState('creating')
+      const x = (clientX - rect.left) * (canvas.width / rect.width);
+      const y = (clientY - rect.top) * (canvas.height / rect.height);
+
+      return boundCoordinates(x, y, canvas);
+    },
+    [boundCoordinates],
+  );
+
+  const handleStart = useCallback(
+    (
+      e:
+        | React.MouseEvent<HTMLCanvasElement>
+        | React.TouchEvent<HTMLCanvasElement>,
+    ) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const { x, y } = getCanvasCoordinates(e);
+
+      if (cropMode) {
+        if (history.length === 0) {
+          saveCanvasState();
         }
-      }
-    } else {
-      setIsDrawing(true)
-      const ctx = canvas.getContext("2d")
-      if (ctx) {
-        ctx.beginPath()
-        ctx.moveTo(x, y)
-      }
-    }
 
-    e.preventDefault()
-  }, [cropMode, cropState, history, saveCanvasState, getResizeHandle, isInsideCropArea, getCropRect, getCanvasCoordinates])
-
-  const handleMove = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const { x, y } = getCanvasCoordinates(e)
-
-    updateCursorStyle(x, y)
-
-    if (cropMode) {
-      if (!cropStart) return
-
-      if (cropState === 'creating') {
-        let endX = x
-        let endY = y
-
-        if (cropGuide) {
-          const [ratioW, ratioH] = cropGuide.split(":").map(Number)
-          const targetRatio = ratioW / ratioH
-
-          const width = Math.abs(x - cropStart.x)
-          const height = Math.abs(y - cropStart.y)
-
-          if (width / height > targetRatio) {
-            endY = cropStart.y + (y > cropStart.y ? width / targetRatio : -width / targetRatio)
+        if (cropState === "inactive" || cropState === "creating") {
+          setCropStart({ x, y });
+          setCropEnd({ x, y });
+          setCropState("creating");
+        } else if (cropState === "set") {
+          const handle = getResizeHandle(x, y);
+          if (handle) {
+            setActiveHandle(handle);
+            setCropState("resizing");
+          } else if (isInsideCropArea(x, y)) {
+            const rect = getCropRect();
+            if (rect) {
+              setDragOffset({ x: x - rect.x, y: y - rect.y });
+              setCropState("moving");
+            }
           } else {
-            endX = cropStart.x + (x > cropStart.x ? height * targetRatio : -height * targetRatio)
-          }
-
-          const bounded = boundCoordinates(endX, endY, canvas)
-          endX = bounded.x
-          endY = bounded.y
-        }
-
-        setCropEnd({ x: endX, y: endY })
-      } else if (cropState === 'moving' && dragOffset && cropEnd) {
-        const rect = getCropRect()
-        if (!rect) return
-
-        const newX = x - dragOffset.x
-        const newY = y - dragOffset.y
-
-        const boundedX = Math.max(0, Math.min(newX, canvas.width - rect.width))
-        const boundedY = Math.max(0, Math.min(newY, canvas.height - rect.height))
-
-        setCropStart({ x: boundedX, y: boundedY })
-        setCropEnd({ x: boundedX + rect.width, y: boundedY + rect.height })
-      } else if (cropState === 'resizing' && activeHandle && cropEnd) {
-        let newCropEnd = { ...cropEnd }
-        let newCropStart = { ...cropStart }
-
-        if (activeHandle.includes('e')) newCropEnd.x = x
-        if (activeHandle.includes('w')) newCropStart.x = x
-        if (activeHandle.includes('s')) newCropEnd.y = y
-        if (activeHandle.includes('n')) newCropStart.y = y
-
-        if (cropGuide) {
-          const [ratioW, ratioH] = cropGuide.split(':').map(Number)
-          const targetRatio = ratioW / ratioH
-          let width = newCropEnd.x - newCropStart.x
-          let height = newCropEnd.y - newCropStart.y
-
-          if (activeHandle === 'nw') {
-            if (Math.abs(width) / Math.abs(height) > targetRatio) {
-              newCropStart.x = newCropEnd.x - Math.abs(height) * targetRatio * (width < 0 ? -1 : 1)
-            } else {
-              newCropStart.y = newCropEnd.y - Math.abs(width) / targetRatio * (height < 0 ? -1 : 1)
-            }
-          } else if (activeHandle === 'ne') {
-            if (Math.abs(width) / Math.abs(height) > targetRatio) {
-              newCropEnd.x = newCropStart.x + Math.abs(height) * targetRatio * (width > 0 ? 1 : -1)
-            } else {
-              newCropStart.y = newCropEnd.y - Math.abs(width) / targetRatio * (height < 0 ? -1 : 1)
-            }
-          } else if (activeHandle === 'sw') {
-            if (Math.abs(width) / Math.abs(height) > targetRatio) {
-              newCropStart.x = newCropEnd.x - Math.abs(height) * targetRatio * (width < 0 ? -1 : 1)
-            } else {
-              newCropEnd.y = newCropStart.y + Math.abs(width) / targetRatio * (height > 0 ? 1 : -1)
-            }
-          } else if (activeHandle === 'se') {
-            if (Math.abs(width) / Math.abs(height) > targetRatio) {
-              newCropEnd.x = newCropStart.x + Math.abs(height) * targetRatio * (width > 0 ? 1 : -1)
-            } else {
-              newCropEnd.y = newCropStart.y + Math.abs(width) / targetRatio * (height > 0 ? 1 : -1)
-            }
+            setCropStart({ x, y });
+            setCropEnd({ x, y });
+            setCropState("creating");
           }
         }
-
-        const boundedStartX = Math.max(0, Math.min(newCropStart.x, canvas.width))
-        const boundedStartY = Math.max(0, Math.min(newCropStart.y, canvas.height))
-        const boundedEndX = Math.max(0, Math.min(newCropEnd.x, canvas.width))
-        const boundedEndY = Math.max(0, Math.min(newCropEnd.y, canvas.height))
-
-        newCropStart = { x: boundedStartX, y: boundedStartY }
-        newCropEnd = { x: boundedEndX, y: boundedEndY }
-
-        setCropStart(newCropStart)
-        setCropEnd(newCropEnd)
+      } else {
+        setIsDrawing(true);
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+        }
       }
 
-      requestAnimationFrame(drawCropOverlay)
-    } else if (isDrawing) {
-      const ctx = canvas.getContext('2d')
-      if (ctx) {
-        ctx.lineTo(x, y)
-        ctx.stroke()
+      e.preventDefault();
+    },
+    [
+      cropMode,
+      cropState,
+      history,
+      saveCanvasState,
+      getResizeHandle,
+      isInsideCropArea,
+      getCropRect,
+      getCanvasCoordinates,
+    ],
+  );
+
+  const handleMove = useCallback(
+    (
+      e:
+        | React.MouseEvent<HTMLCanvasElement>
+        | React.TouchEvent<HTMLCanvasElement>,
+    ) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const { x, y } = getCanvasCoordinates(e);
+
+      updateCursorStyle(x, y);
+
+      if (cropMode) {
+        if (!cropStart) return;
+
+        if (cropState === "creating") {
+          let endX = x;
+          let endY = y;
+
+          if (cropGuide) {
+            const [ratioW, ratioH] = cropGuide.split(":").map(Number);
+            const targetRatio = ratioW / ratioH;
+
+            const width = Math.abs(x - cropStart.x);
+            const height = Math.abs(y - cropStart.y);
+
+            if (width / height > targetRatio) {
+              endY =
+                cropStart.y +
+                (y > cropStart.y ? width / targetRatio : -width / targetRatio);
+            } else {
+              endX =
+                cropStart.x +
+                (x > cropStart.x
+                  ? height * targetRatio
+                  : -height * targetRatio);
+            }
+
+            const bounded = boundCoordinates(endX, endY, canvas);
+            endX = bounded.x;
+            endY = bounded.y;
+          }
+
+          setCropEnd({ x: endX, y: endY });
+        } else if (cropState === "moving" && dragOffset && cropEnd) {
+          const rect = getCropRect();
+          if (!rect) return;
+
+          const newX = x - dragOffset.x;
+          const newY = y - dragOffset.y;
+
+          const boundedX = Math.max(
+            0,
+            Math.min(newX, canvas.width - rect.width),
+          );
+          const boundedY = Math.max(
+            0,
+            Math.min(newY, canvas.height - rect.height),
+          );
+
+          setCropStart({ x: boundedX, y: boundedY });
+          setCropEnd({ x: boundedX + rect.width, y: boundedY + rect.height });
+        } else if (cropState === "resizing" && activeHandle && cropEnd) {
+          let newCropEnd = { ...cropEnd };
+          let newCropStart = { ...cropStart };
+
+          if (activeHandle.includes("e")) newCropEnd.x = x;
+          if (activeHandle.includes("w")) newCropStart.x = x;
+          if (activeHandle.includes("s")) newCropEnd.y = y;
+          if (activeHandle.includes("n")) newCropStart.y = y;
+
+          if (cropGuide) {
+            const [ratioW, ratioH] = cropGuide.split(":").map(Number);
+            const targetRatio = ratioW / ratioH;
+            let width = newCropEnd.x - newCropStart.x;
+            let height = newCropEnd.y - newCropStart.y;
+
+            if (activeHandle === "nw") {
+              if (Math.abs(width) / Math.abs(height) > targetRatio) {
+                newCropStart.x =
+                  newCropEnd.x -
+                  Math.abs(height) * targetRatio * (width < 0 ? -1 : 1);
+              } else {
+                newCropStart.y =
+                  newCropEnd.y -
+                  (Math.abs(width) / targetRatio) * (height < 0 ? -1 : 1);
+              }
+            } else if (activeHandle === "ne") {
+              if (Math.abs(width) / Math.abs(height) > targetRatio) {
+                newCropEnd.x =
+                  newCropStart.x +
+                  Math.abs(height) * targetRatio * (width > 0 ? 1 : -1);
+              } else {
+                newCropStart.y =
+                  newCropEnd.y -
+                  (Math.abs(width) / targetRatio) * (height < 0 ? -1 : 1);
+              }
+            } else if (activeHandle === "sw") {
+              if (Math.abs(width) / Math.abs(height) > targetRatio) {
+                newCropStart.x =
+                  newCropEnd.x -
+                  Math.abs(height) * targetRatio * (width < 0 ? -1 : 1);
+              } else {
+                newCropEnd.y =
+                  newCropStart.y +
+                  (Math.abs(width) / targetRatio) * (height > 0 ? 1 : -1);
+              }
+            } else if (activeHandle === "se") {
+              if (Math.abs(width) / Math.abs(height) > targetRatio) {
+                newCropEnd.x =
+                  newCropStart.x +
+                  Math.abs(height) * targetRatio * (width > 0 ? 1 : -1);
+              } else {
+                newCropEnd.y =
+                  newCropStart.y +
+                  (Math.abs(width) / targetRatio) * (height > 0 ? 1 : -1);
+              }
+            }
+          }
+
+          const boundedStartX = Math.max(
+            0,
+            Math.min(newCropStart.x, canvas.width),
+          );
+          const boundedStartY = Math.max(
+            0,
+            Math.min(newCropStart.y, canvas.height),
+          );
+          const boundedEndX = Math.max(0, Math.min(newCropEnd.x, canvas.width));
+          const boundedEndY = Math.max(
+            0,
+            Math.min(newCropEnd.y, canvas.height),
+          );
+
+          newCropStart = { x: boundedStartX, y: boundedStartY };
+          newCropEnd = { x: boundedEndX, y: boundedEndY };
+
+          setCropStart(newCropStart);
+          setCropEnd(newCropEnd);
+        }
+
+        requestAnimationFrame(drawCropOverlay);
+      } else if (isDrawing) {
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.lineTo(x, y);
+          ctx.stroke();
+        }
       }
-    }
-    e.preventDefault()
-  }, [cropMode, cropStart, cropEnd, cropState, cropGuide, dragOffset, activeHandle, getCropRect, boundCoordinates, updateCursorStyle, drawCropOverlay, getCanvasCoordinates, isDrawing])
+      e.preventDefault();
+    },
+    [
+      cropMode,
+      cropStart,
+      cropEnd,
+      cropState,
+      cropGuide,
+      dragOffset,
+      activeHandle,
+      getCropRect,
+      boundCoordinates,
+      updateCursorStyle,
+      drawCropOverlay,
+      getCanvasCoordinates,
+      isDrawing,
+    ],
+  );
 
   const handleEnd = useCallback(() => {
-    if (cropState === 'creating') {
-      setCropState('set')
-    } else if (cropState === 'moving') {
-      setCropState('set')
-      setDragOffset(null)
-    } else if (cropState === 'resizing') {
-      setCropState('set')
-      setActiveHandle(null)
+    if (cropState === "creating") {
+      setCropState("set");
+    } else if (cropState === "moving") {
+      setCropState("set");
+      setDragOffset(null);
+    } else if (cropState === "resizing") {
+      setCropState("set");
+      setActiveHandle(null);
     }
     if (isDrawing) {
-      saveCanvasState()
-      setIsDrawing(false)
+      saveCanvasState();
+      setIsDrawing(false);
     }
-  }, [cropState, isDrawing, saveCanvasState])
+  }, [cropState, isDrawing, saveCanvasState]);
 
   const applyCrop = useCallback(() => {
-      const canvas = canvasRef.current
-    if (!canvas || !cropStart || !cropEnd) return
+    const canvas = canvasRef.current;
+    if (!canvas || !cropStart || !cropEnd) return;
 
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-    const x = Math.min(cropStart.x, cropEnd.x)
-    const y = Math.min(cropStart.y, cropEnd.y)
-    const width = Math.abs(cropEnd.x - cropStart.x)
-    const height = Math.abs(cropEnd.y - cropStart.y)
+    const x = Math.min(cropStart.x, cropEnd.x);
+    const y = Math.min(cropStart.y, cropEnd.y);
+    const width = Math.abs(cropEnd.x - cropStart.x);
+    const height = Math.abs(cropEnd.y - cropStart.y);
 
     if (width > 0 && height > 0) {
-      const tempCanvas = document.createElement("canvas")
-      tempCanvas.width = width
-      tempCanvas.height = height
-      const tempCtx = tempCanvas.getContext("2d")
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = width;
+      tempCanvas.height = height;
+      const tempCtx = tempCanvas.getContext("2d");
       if (tempCtx) {
-        const imageData = ctx.getImageData(x, y, width, height)
-        tempCtx.putImageData(imageData, 0, 0)
+        const imageData = ctx.getImageData(x, y, width, height);
+        tempCtx.putImageData(imageData, 0, 0);
 
         // Resize main canvas
-        canvas.width = width
-        canvas.height = height
-        ctx.clearRect(0, 0, width, height)
-        ctx.drawImage(tempCanvas, 0, 0)
-        saveCanvasState()
+        canvas.width = width;
+        canvas.height = height;
+        ctx.clearRect(0, 0, width, height);
+        ctx.drawImage(tempCanvas, 0, 0);
+        saveCanvasState();
       }
     }
 
-  // Reset all crop states
-  setCropMode(false)
-  setCropStart(null)
-  setCropEnd(null)
-  setCropGuide(null)
-  setCropState('inactive')
-  setDragOffset(null)
-  setActiveHandle(null)
-}, [cropStart, cropEnd, saveCanvasState])
+    // Reset all crop states
+    setCropMode(false);
+    setCropStart(null);
+    setCropEnd(null);
+    setCropGuide(null);
+    setCropState("inactive");
+    setDragOffset(null);
+    setActiveHandle(null);
+  }, [cropStart, cropEnd, saveCanvasState]);
+  // File Operations Handlers
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+    const file = event.target.files?.[0];
     if (file && file.type.startsWith("image/")) {
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onload = (e) => {
-        const img = new Image()
+        const img = new Image();
         img.onload = () => {
-          const canvas = canvasRef.current
+          const canvas = canvasRef.current;
           if (canvas) {
-            const ctx = canvas.getContext("2d")
+            const ctx = canvas.getContext("2d");
             if (ctx) {
-              const maxWidth = Math.min(window.innerWidth - 50, 1800)
-              const maxHeight = Math.min(window.innerHeight - 200, 1200)
+              const maxWidth = Math.min(window.innerWidth - 50, 1800);
+              const maxHeight = Math.min(window.innerHeight - 200, 1200);
 
-              let canvasWidth = img.width
-              let canvasHeight = img.height
+              let canvasWidth = img.width;
+              let canvasHeight = img.height;
 
               if (canvasWidth > maxWidth || canvasHeight > maxHeight) {
-                const scaleX = maxWidth / canvasWidth
-                const scaleY = maxHeight / canvasHeight
-                const scale = Math.min(scaleX, scaleY)
+                const scaleX = maxWidth / canvasWidth;
+                const scaleY = maxHeight / canvasHeight;
+                const scale = Math.min(scaleX, scaleY);
 
-                canvasWidth = Math.floor(canvasWidth * scale)
-                canvasHeight = Math.floor(canvasHeight * scale)
+                canvasWidth = Math.floor(canvasWidth * scale);
+                canvasHeight = Math.floor(canvasHeight * scale);
               }
 
-              canvas.width = canvasWidth
-              canvas.height = canvasHeight
-              ctx.clearRect(0, 0, canvasWidth, canvasHeight)
-              ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight)
-              saveCanvasState()
+              canvas.width = canvasWidth;
+              canvas.height = canvasHeight;
+              ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+              ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+              saveCanvasState();
             }
           }
-        }
-        img.src = e.target?.result as string
-      }
-      reader.readAsDataURL(file)
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
     }
-  }
+  };
 
   const triggerFileUpload = () => {
-    fileInputRef.current?.click()
-  }
+    fileInputRef.current?.click();
+  };
 
-const clearCanvas = () => {
-  const canvas = canvasRef.current
-  if (canvas) {
-    const ctx = canvas.getContext("2d")
-    if (ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      setImageData(null)
-      setHistory([])
-      setHistoryIndex(-1)
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        setImageData(null);
+        setHistory([]);
+        setHistoryIndex(-1);
+      }
     }
-  }
-}
+  };
 
   const exportImage = () => {
-    const canvas = canvasRef.current
+    const canvas = canvasRef.current;
     if (canvas) {
-      const link = document.createElement("a")
-      link.download = "edited-image.png"
-      link.href = canvas.toDataURL()
-      link.click()
+      const link = document.createElement("a");
+      link.download = "edited-image.png";
+      link.href = canvas.toDataURL();
+      link.click();
     }
-  }
-
-  // Styles
-  const cardStyle: React.CSSProperties = {
-    backgroundColor: 'white',
-    border: '1px solid #e0e0e0',
-    borderRadius: '12px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-    overflow: 'hidden'
-  }
-
-  const cardHeaderStyle: React.CSSProperties = {
-    padding: '20px',
-    borderBottom: '1px solid #e0e0e0',
-    backgroundColor: '#f8f9fa'
-  }
-
-  const cardContentStyle: React.CSSProperties = {
-    padding: '20px'
-  }
-
-  const buttonStyle: React.CSSProperties = {
-    padding: '12px 16px',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '500',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px'
-  }
-
-  const primaryButtonStyle: React.CSSProperties = {
-    ...buttonStyle,
-    backgroundColor: '#007bff',
-    color: 'white'
-  }
-
-  const outlineButtonStyle: React.CSSProperties = {
-    ...buttonStyle,
-    backgroundColor: 'white',
-    color: '#333',
-    border: '1px solid #ddd'
-  }
-
-  const secondaryButtonStyle: React.CSSProperties = {
-    ...buttonStyle,
-    backgroundColor: '#6c757d',
-    color: 'white'
-  }
-
-  const destructiveButtonStyle: React.CSSProperties = {
-    ...buttonStyle,
-    backgroundColor: '#dc3545',
-    color: 'white'
-  }
+  };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f7fa', padding: '20px' }}>
-      <input 
-        ref={fileInputRef} 
-        type="file" 
-        accept="image/*" 
-        onChange={handleFileUpload} 
-        style={{ display: "none" }} 
+    <div className="min-h-screen bg-gray-50 p-5">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileUpload}
+        className="hidden"
       />
 
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <header style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <h1 style={{ fontSize: '48px', fontWeight: 'bold', color: '#2c3e50', margin: '0 0 16px 0' }}>
+      <div className="max-w-7xl mx-auto">
+        <header className="text-center mb-10">
+          <h1 className="text-5xl font-bold text-gray-800 mb-4">
             🎨 Image Editor Pro
           </h1>
-          <p style={{ fontSize: '18px', color: '#6c757d', margin: 0 }}>
+          <p className="text-lg text-gray-600">
             Professional Image Editing with HTML5 Canvas
           </p>
         </header>
 
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
-          gap: '24px', 
-          marginBottom: '40px' 
-        }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           {/* Transform Tools */}
-          <div style={cardStyle}>
-            <div style={cardHeaderStyle}>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '600', color: '#2c3e50' }}>
+          <div className="bg-white border border-gray-200 rounded-lg shadow-md overflow-hidden">
+            <div className="p-5 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
                 🔄 Transform
               </h3>
-              <p style={{ margin: 0, fontSize: '14px', color: '#6c757d' }}>
+              <p className="text-sm text-gray-500">
                 Rotate, flip, and resize your image
               </p>
             </div>
-            <div style={cardContentStyle}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <button 
-                  style={outlineButtonStyle}
-                  onClick={() => rotateImage(90)}
-                >
+            <div className="p-5">
+              <div className="flex flex-col gap-3">
+                <button className="btn-outline" onClick={() => rotateImage(90)}>
                   ↻ Rotate 90°
                 </button>
-                <button 
-                  style={outlineButtonStyle}
+                <button
+                  className="btn-outline"
                   onClick={() => rotateImage(180)}
                 >
                   ⟲ Rotate 180°
                 </button>
-                <button 
-                  style={outlineButtonStyle}
+                <button
+                  className="btn-outline"
                   onClick={() => flipImage("horizontal")}
                 >
                   ↔ Flip Horizontal
                 </button>
-                <button 
-                  style={outlineButtonStyle}
+                <button
+                  className="btn-outline"
                   onClick={() => flipImage("vertical")}
                 >
                   ↕ Flip Vertical
                 </button>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button 
-                    style={{...outlineButtonStyle, flex: 1}}
+                <div className="flex gap-3">
+                  <button
+                    className="btn-outline flex-1"
                     onClick={undo}
                     disabled={historyIndex <= 0}
                   >
                     ↩️ Undo
                   </button>
-                  <button 
-                    style={{...outlineButtonStyle, flex: 1}}
+                  <button
+                    className="btn-outline flex-1"
                     onClick={redo}
                     disabled={historyIndex >= history.length - 1}
                   >
@@ -774,113 +896,139 @@ const clearCanvas = () => {
           </div>
 
           {/* Crop Tools */}
-          <div style={cardStyle}>
-            <div style={cardHeaderStyle}>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '600', color: '#2c3e50' }}>
+          <div className="bg-white border border-gray-200 rounded-lg shadow-md overflow-hidden">
+            <div className="p-5 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
                 ✂️ Crop & Guides
               </h3>
-              <p style={{ margin: 0, fontSize: '14px', color: '#6c757d' }}>
+              <p className="text-sm text-gray-500">
                 Crop with aspect ratio guides
               </p>
             </div>
-            <div style={cardContentStyle}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="p-5">
+              <div className="flex flex-col gap-3">
                 <button
-                  style={cropMode ? primaryButtonStyle : outlineButtonStyle}
-                                    onClick={() => {
+                  className={cropMode ? "btn-primary" : "btn-outline"}
+                  onClick={() => {
                     if (!cropMode) {
-                      setCropMode(true)
-                      setCropStart(null)
-                      setCropEnd(null)
-                      setCropState('inactive')
-                      saveCanvasState()
+                      setCropMode(true);
+                      setCropStart(null);
+                      setCropEnd(null);
+                      setCropState("inactive");
+                      saveCanvasState();
                     } else {
-                      cancelCrop()
+                      cancelCrop();
                     }
-                    setCropGuide(null)
+                    setCropGuide(null);
                   }}
                 >
                   ✂️ {cropMode ? "Cancel Crop" : "Free Crop"}
                 </button>
 
-                {cropMode && cropState === 'set' && (
-                  <button 
-                    style={secondaryButtonStyle} 
-                    onClick={applyCrop}
-                  >
+                {cropMode && cropState === "set" && (
+                  <button className="btn-secondary" onClick={applyCrop}>
                     ✓ Apply Crop
                   </button>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                <div className="grid grid-cols-2 gap-2">
                   {[
                     { ratio: "1:1" },
                     { ratio: "4:3" },
                     { ratio: "16:9" },
                     { ratio: "9:21" },
                     { ratio: "2:3" },
-                    { ratio: "4:5" }
+                    { ratio: "4:5" },
                   ].map(({ ratio }) => (
                     <button
                       key={ratio}
-                      style={{
-                        ...buttonStyle,
-                        fontSize: '12px',
-                        padding: '8px 12px',
-                        backgroundColor: cropGuide === (aspectRatios[ratio] || ratio)
-                          ? '#007bff' : 'white',
-                        color: cropGuide === (aspectRatios[ratio] || ratio)
-                          ? 'white' : '#333',
-                        border: '1px solid #ddd'
-                      }}
-                      onClick={() => handleCropButtonClick(aspectRatios[ratio] || ratio)}
+                      className={`btn-ratio ${
+                        cropGuide === (aspectRatios[ratio] || ratio)
+                          ? "btn-ratio-active"
+                          : ""
+                      }`}
+                      onClick={() =>
+                        handleCropButtonClick(aspectRatios[ratio] || ratio)
+                      }
                       onDoubleClick={() => handleCropButtonDoubleClick(ratio)}
                       onTouchEnd={(e) => handleCropButtonTouchEnd(ratio, e)}
                     >
                       {aspectRatios[ratio] || ratio}
                     </button>
                   ))}
+                  <div
+                    className={`btn-ratio inline-flex items-center justify-center cursor-pointer ${
+                      cropGuide === `${customRatioX}:${customRatioY}`
+                        ? "btn-ratio-active"
+                        : ""
+                    }`}
+                    onClick={(e) => {
+                      const newRatio = `${customRatioX}:${customRatioY}`;
+                      handleCropButtonClick(newRatio);
+                    }}
+                    onDoubleClick={() => {
+                      const temp = customRatioX;
+                      setCustomRatioX(customRatioY);
+                      setCustomRatioY(temp);
+                    }}
+                    onTouchEnd={(e) => {
+                      const ratio = `${customRatioX}:${customRatioY}`;
+                      handleCropButtonTouchEnd(ratio, e);
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={customRatioX}
+                      onChange={(e) => setCustomRatioX(e.target.value)}
+                      className="w-8 text-center bg-transparent outline-none"
+                    />
+                    <span className="mx-1">:</span>
+                    <input
+                      type="text"
+                      value={customRatioY}
+                      onChange={(e) => setCustomRatioY(e.target.value)}
+                      className="w-8 text-center bg-transparent outline-none"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Drawing Tools */}
-          <div style={cardStyle}>
-            <div style={cardHeaderStyle}>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '600', color: '#2c3e50' }}>
+          <div className="bg-white border border-gray-200 rounded-lg shadow-md overflow-hidden">
+            <div className="p-5 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
                 ✏️ Drawing Tools
               </h3>
-              <p style={{ margin: 0, fontSize: '14px', color: '#6c757d' }}>
+              <p className="text-sm text-gray-500">
                 Draw and edit on your image
               </p>
             </div>
-            <div style={cardContentStyle}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="p-5">
+              <div className="flex flex-col gap-3">
                 <button
-                  style={currentTool === "pencil" ? primaryButtonStyle : outlineButtonStyle}
+                  className={
+                    currentTool === "pencil" ? "btn-primary" : "btn-outline"
+                  }
                   onClick={() => setCurrentTool("pencil")}
                 >
                   ✏️ Pencil
                 </button>
                 <button
-                  style={currentTool === "eraser" ? primaryButtonStyle : outlineButtonStyle}
+                  className={
+                    currentTool === "eraser" ? "btn-primary" : "btn-outline"
+                  }
                   onClick={() => setCurrentTool("eraser")}
                 >
                   🗑️ Eraser
                 </button>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className="flex items-center gap-3">
                   <input
                     type="color"
                     value={currentColor}
                     onChange={(e) => setCurrentColor(e.target.value)}
-                    style={{ 
-                      width: '40px', 
-                      height: '40px', 
-                      border: '1px solid #ddd', 
-                      borderRadius: '6px',
-                      cursor: 'pointer'
-                    }}
+                    className="w-10 h-10 border border-gray-300 rounded-md cursor-pointer"
                   />
                   <input
                     type="range"
@@ -888,9 +1036,9 @@ const clearCanvas = () => {
                     max="50"
                     value={brushSize}
                     onChange={(e) => setBrushSize(Number(e.target.value))}
-                    style={{ flex: 1 }}
+                    className="flex-1"
                   />
-                  <span style={{ fontSize: '12px', color: '#666', minWidth: '35px' }}>
+                  <span className="text-xs text-gray-600 min-w-[35px]">
                     {brushSize}px
                   </span>
                 </div>
@@ -899,120 +1047,118 @@ const clearCanvas = () => {
           </div>
 
           {/* File Operations */}
-          <div style={cardStyle}>
-            <div style={cardHeaderStyle}>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '600', color: '#2c3e50' }}>
+          <div className="bg-white border border-gray-200 rounded-lg shadow-md overflow-hidden">
+            <div className="p-5 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
                 📁 File Operations
               </h3>
-              <p style={{ margin: 0, fontSize: '14px', color: '#6c757d' }}>
+              <p className="text-sm text-gray-500">
                 Load, save, and export images
               </p>
             </div>
-            <div style={cardContentStyle}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <button 
-                  style={secondaryButtonStyle} 
-                  onClick={triggerFileUpload}
-                >
+            <div className="p-5">
+              <div className="flex flex-col gap-3">
+                <button className="btn-secondary" onClick={triggerFileUpload}>
                   📂 Open Image
                 </button>
-                <button 
-                  style={secondaryButtonStyle} 
-                  onClick={exportImage}
-                >
+                <button className="btn-secondary" onClick={exportImage}>
                   💾 Export PNG
                 </button>
-                <button 
-                  style={destructiveButtonStyle} 
-                  onClick={clearCanvas}
-                >
+                <button className="btn-destructive" onClick={clearCanvas}>
                   🗑️ Clear Canvas
                 </button>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button 
-                    style={{
-                      ...outlineButtonStyle,
-                      flex: 1,
-                      fontSize: '12px',
-                      padding: '8px 12px'
-                    }}
+                <div className="flex gap-3 mt-3">
+                  <button
+                    className="btn-outline flex-1"
                     onClick={() => resizeImage(800, 600)}
                   >
-                    800×600
+                    800x600
                   </button>
-                  <button 
-                    style={{
-                      ...outlineButtonStyle,
-                      flex: 1,
-                      fontSize: '12px',
-                      padding: '8px 12px'
-                    }}
+                  <button
+                    className="btn-outline flex-1"
                     onClick={() => resizeImage(1920, 1080)}
                   >
-                    1920×1080
+                    1920x1080
                   </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
+        <div
+          className="btn-outline flex-1 inline-flex items-center justify-center cursor-pointer"
+          onClick={() => {
+            const newWidth = parseInt(customWidth, 10);
+            const newHeight = parseInt(customHeight, 10);
+            if (
+              !isNaN(newWidth) &&
+              !isNaN(newHeight) &&
+              newWidth > 0 &&
+              newHeight > 0
+            ) {
+              resizeImage(newWidth, newHeight);
+            }
+          }}
+          onTouchEnd={(e) => {
+            const newWidth = parseInt(customWidth, 10);
+            const newHeight = parseInt(customHeight, 10);
+            if (
+              !isNaN(newWidth) &&
+              !isNaN(newHeight) &&
+              newWidth > 0 &&
+              newHeight > 0
+            ) {
+              // Handle touch end logic here - you might want to add touch double-tap detection
+              resizeImage(newWidth, newHeight);
+            }
+          }}
+        >
+          <input
+            type="text"
+            value={customWidth}
+            onChange={(e) => setCustomWidth(e.target.value)}
+            className="w-12 text-center bg-transparent outline-none text-xs"
+            placeholder="1920"
+          />
+          <span className="mx-1 text-xs">×</span>
+          <input
+            type="text"
+            value={customHeight}
+            onChange={(e) => setCustomHeight(e.target.value)}
+            className="w-12 text-center bg-transparent outline-none text-xs"
+            placeholder="1080"
+          />
+        </div>
         {/* Canvas Area */}
-        <div style={cardStyle}>
-          <div style={cardHeaderStyle}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600', color: '#2c3e50' }}>
+        <div className="bg-white border border-gray-200 rounded-lg shadow-md overflow-hidden">
+          <div className="p-5 border-b border-gray-200 bg-gray-50">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
               🎨 Image Editor Canvas
             </h3>
             {cropMode && (
-              <div style={{ 
-                padding: '16px',
-                backgroundColor: '#fff3cd',
-                border: '1px solid #ffeaa7',
-                borderRadius: '8px',
-                fontSize: '14px',
-                color: '#856404'
-              }}>
-                <div style={{ marginBottom: '8px' }}>
-                  <strong>
-                    {cropGuide
-                      ? `Crop Mode: ${cropGuide} ratio`
-                      : "Crop Mode: Free form"}
-                  </strong>
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm">
+                <div className="font-bold mb-2">
+                  {cropGuide
+                    ? `Crop Mode: ${cropGuide} ratio`
+                    : "Crop Mode: Free form"}
                 </div>
-                <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                <div className="opacity-80 text-xs">
                   Drag to create • Click inside to move • Drag corners to resize
                   <br />
-                  Double-click ratio buttons to flip orientation • State: {cropState}
+                  Double-click ratio buttons to flip orientation • State:{" "}
+                  {cropState}
                 </div>
               </div>
             )}
           </div>
-          <div style={cardContentStyle}>
-            <div style={{ 
-              border: '2px dashed #ddd',
-              borderRadius: '12px',
-              padding: '16px',
-              textAlign: 'center',
-              backgroundColor: '#fafbfc',
-              overflow: 'auto'
-            }}>
+          <div className="p-5">
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-gray-50 overflow-auto">
               <canvas
                 ref={canvasRef}
                 width="800"
                 height="400"
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: '80vh',
-                  height: 'auto',
-                  objectFit: 'contain',
-                  cursor: cursorStyle,
-                  border: '1px solid #e0e0e0',
-                  borderRadius: '8px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  backgroundColor: 'white',
-                  display: 'block',
-                  margin: '0 auto'
-                }}
+                className="max-w-full max-h-[80vh] h-auto object-contain border border-gray-300 rounded-lg shadow-sm bg-white block mx-auto"
+                style={{ cursor: cursorStyle }}
                 onMouseDown={handleStart}
                 onMouseMove={handleMove}
                 onMouseUp={handleEnd}
@@ -1027,22 +1173,9 @@ const clearCanvas = () => {
         </div>
 
         {/* Status Bar */}
-        <div style={{
-          marginTop: '24px',
-          padding: '16px 24px',
-          backgroundColor: 'white',
-          border: '1px solid #e0e0e0',
-          borderRadius: '12px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            fontSize: '14px',
-            color: '#6c757d'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
+        <div className="mt-6 p-4 bg-white border border-gray-300 rounded-lg shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-600">
+            <div className="flex flex-wrap items-center gap-6">
               <span>
                 <strong>Mode:</strong>{" "}
                 {cropMode
@@ -1055,19 +1188,17 @@ const clearCanvas = () => {
                 <strong>Color:</strong> {currentColor}
               </span>
               <span>
-                <strong>Size:</strong> {canvasRef.current?.width || 800}×{canvasRef.current?.height || 400}
+                <strong>Size:</strong> {canvasRef.current?.width || 800}×
+                {canvasRef.current?.height || 400}
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ 
-                color: '#28a745',
-                fontSize: '16px'
-              }}>●</span>
+            <div className="flex items-center gap-2">
+              <span className="text-green-500 text-lg">●</span>
               <span>Ready</span>
             </div>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
