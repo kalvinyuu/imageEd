@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 
 type CropState = "inactive" | "creating" | "set" | "moving" | "resizing";
 type ResizeHandle = "nw" | "ne" | "sw" | "se" | null;
+type Filter = "none" | "grayscale" | "sepia" | "vintage";
 
 export default function HomePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -23,6 +24,10 @@ export default function HomePage() {
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(
     null,
   );
+  const [brightness, setBrightness] = useState(100);
+  const [contrast, setContrast] = useState(100);
+  const [currentFilter, setCurrentFilter] = useState<Filter>("none");
+
   const [activeHandle, setActiveHandle] = useState<ResizeHandle>(null);
   const [cursorStyle, setCursorStyle] = useState("default");
   const [lastTouchTime, setLastTouchTime] = useState<{ [key: string]: number }>(
@@ -52,6 +57,7 @@ export default function HomePage() {
         );
         setHistory((prev) => {
           const newHistory = prev.slice(0, historyIndex + 1);
+
           newHistory.push(currentImageData);
           return newHistory;
         });
@@ -168,12 +174,7 @@ export default function HomePage() {
 
       saveCanvasState(); // Save state before rotation
 
-      const currentImageData = ctx.getImageData(
-        0,
-        0,
-        canvas.width,
-        canvas.height,
-      );
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const tempCanvas = document.createElement("canvas");
       const tempCtx = tempCanvas.getContext("2d");
       if (!tempCtx) return;
@@ -206,6 +207,85 @@ export default function HomePage() {
     },
     [saveCanvasState],
   );
+
+  // Filters & Adjustments
+  const applyFilter = useCallback((filter: Filter) => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+
+    const currentImageData = ctx.getImageData(
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    );
+    setImageData(currentImageData);
+
+    if (filter === "none") {
+      setCurrentFilter(filter);
+      return;
+    }
+
+    const data = currentImageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i],
+        g = data[i + 1],
+        b = data[i + 2];
+
+      if (filter === "grayscale") {
+        const gray = r * 0.299 + g * 0.587 + b * 0.114;
+        data[i] = data[i + 1] = data[i + 2] = gray;
+      } else if (filter === "sepia") {
+        data[i] = Math.min(255, r * 0.393 + g * 0.769 + b * 0.189);
+        data[i + 1] = Math.min(255, r * 0.349 + g * 0.686 + b * 0.168);
+        data[i + 2] = Math.min(255, r * 0.272 + g * 0.534 + b * 0.131);
+      } else if (filter === "vintage") {
+        data[i] = Math.min(255, r * 1.2);
+        data[i + 1] = Math.min(255, g * 1.1);
+        data[i + 2] = Math.min(255, b * 0.8);
+      }
+    }
+
+    ctx.putImageData(currentImageData, 0, 0);
+    setCurrentFilter(filter);
+  }, []);
+
+  const applyAdjustments = useCallback(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx || !imageData) return;
+
+    ctx.putImageData(imageData, 0, 0);
+    const data = imageData.data;
+
+    const brightnessAdj = (brightness - 100) * 2.55;
+    const contrastAdj = contrast / 100;
+
+    for (let i = 0; i < data.length; i += 4) {
+      // Brightness
+      let r = data[i] + brightnessAdj;
+      let g = data[i + 1] + brightnessAdj;
+      let b = data[i + 2] + brightnessAdj;
+
+      // Contrast
+      r = (r - 128) * contrastAdj + 128;
+      g = (g - 128) * contrastAdj + 128;
+      b = (b - 128) * contrastAdj + 128;
+
+      data[i] = Math.max(0, Math.min(255, r));
+      data[i + 1] = Math.max(0, Math.min(255, g));
+      data[i + 2] = Math.max(0, Math.min(255, b));
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+  }, [brightness, contrast, imageData]);
+
+  // Effects
+  useEffect(() => {
+    if (imageData) applyAdjustments();
+  }, [brightness, contrast, applyAdjustments, imageData]);
 
   const flipImage = useCallback(
     (direction: "horizontal" | "vertical") => {
@@ -753,6 +833,7 @@ export default function HomePage() {
     setDragOffset(null);
     setActiveHandle(null);
   }, [cropStart, cropEnd, saveCanvasState]);
+
   // File Operations Handlers
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -962,7 +1043,7 @@ export default function HomePage() {
                         ? "btn-ratio-active"
                         : ""
                     }`}
-                    onClick={(e) => {
+                    onClick={() => {
                       const newRatio = `${customRatioX}:${customRatioY}`;
                       handleCropButtonClick(newRatio);
                     }}
@@ -1046,6 +1127,75 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* Adjustments - Enhanced Card */}
+          <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200">
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-4">
+              <h2 className="font-medium text-white">Adjustments</h2>
+            </div>
+            <div className="p-5">
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Brightness: {brightness}%
+                </label>
+                <div className="flex items-center space-x-3">
+                  <span className="text-xs text-gray-500">0</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="200"
+                    value={brightness}
+                    onChange={(e) => setBrightness(parseInt(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                  />
+                  <span className="text-xs text-gray-500">200</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contrast: {contrast}%
+                </label>
+                <div className="flex items-center space-x-3">
+                  <span className="text-xs text-gray-500">0</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="200"
+                    value={contrast}
+                    onChange={(e) => setContrast(parseInt(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                  />
+                  <span className="text-xs text-gray-500">200</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters - Enhanced Card */}
+          <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200">
+            <div className="bg-gradient-to-r from-pink-500 to-rose-500 p-4">
+              <h2 className="font-medium text-white">Filters</h2>
+            </div>
+            <div className="p-5">
+              <div className="grid grid-cols-2 gap-3">
+                {(["none", "grayscale", "sepia", "vintage"] as Filter[]).map(
+                  (filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => applyFilter(filter)}
+                      className={`py-2 px-3 text-sm rounded-lg transition-all duration-200 capitalize ${
+                        currentFilter === filter
+                          ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
+                    >
+                      {filter}
+                    </button>
+                  ),
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* File Operations */}
           <div className="bg-white border border-gray-200 rounded-lg shadow-md overflow-hidden">
             <div className="p-5 border-b border-gray-200 bg-gray-50">
@@ -1081,54 +1231,45 @@ export default function HomePage() {
                     1920x1080
                   </button>
                 </div>
+                <div className="flex items-center gap-2 mt-3">
+                  <input
+                    type="text"
+                    value={customWidth}
+                    onChange={(e) => setCustomWidth(e.target.value)}
+                    className="w-16 text-center border border-gray-300 rounded-md p-1 text-sm"
+                    placeholder="Width"
+                  />
+                  <span className="text-gray-500">×</span>
+                  <input
+                    type="text"
+                    value={customHeight}
+                    onChange={(e) => setCustomHeight(e.target.value)}
+                    className="w-16 text-center border border-gray-300 rounded-md p-1 text-sm"
+                    placeholder="Height"
+                  />
+                  <button
+                    className="btn-outline text-sm"
+                    onClick={() => {
+                      const newWidth = parseInt(customWidth, 10);
+                      const newHeight = parseInt(customHeight, 10);
+                      if (
+                        !isNaN(newWidth) &&
+                        !isNaN(newHeight) &&
+                        newWidth > 0 &&
+                        newHeight > 0
+                      ) {
+                        resizeImage(newWidth, newHeight);
+                      }
+                    }}
+                  >
+                    Apply
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        <div
-          className="btn-outline flex-1 inline-flex items-center justify-center cursor-pointer"
-          onClick={() => {
-            const newWidth = parseInt(customWidth, 10);
-            const newHeight = parseInt(customHeight, 10);
-            if (
-              !isNaN(newWidth) &&
-              !isNaN(newHeight) &&
-              newWidth > 0 &&
-              newHeight > 0
-            ) {
-              resizeImage(newWidth, newHeight);
-            }
-          }}
-          onTouchEnd={(e) => {
-            const newWidth = parseInt(customWidth, 10);
-            const newHeight = parseInt(customHeight, 10);
-            if (
-              !isNaN(newWidth) &&
-              !isNaN(newHeight) &&
-              newWidth > 0 &&
-              newHeight > 0
-            ) {
-              // Handle touch end logic here - you might want to add touch double-tap detection
-              resizeImage(newWidth, newHeight);
-            }
-          }}
-        >
-          <input
-            type="text"
-            value={customWidth}
-            onChange={(e) => setCustomWidth(e.target.value)}
-            className="w-12 text-center bg-transparent outline-none text-xs"
-            placeholder="1920"
-          />
-          <span className="mx-1 text-xs">×</span>
-          <input
-            type="text"
-            value={customHeight}
-            onChange={(e) => setCustomHeight(e.target.value)}
-            className="w-12 text-center bg-transparent outline-none text-xs"
-            placeholder="1080"
-          />
-        </div>
+
         {/* Canvas Area */}
         <div className="bg-white border border-gray-200 rounded-lg shadow-md overflow-hidden">
           <div className="p-5 border-b border-gray-200 bg-gray-50">
