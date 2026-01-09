@@ -87,12 +87,32 @@ export const HomePage: React.FC = () => {
     }
   };
 
-  const exportImage = () => {
+  const exportImage = (
+    format: string = "png",
+    quality: number = 0.92,
+    scale: number = 1
+  ) => {
     const canvas = canvasRef.current;
     if (canvas) {
+      let finalCanvas = canvas;
+
+      // Handle scaling if not 100%
+      if (scale !== 1) {
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = canvas.width * scale;
+        tempCanvas.height = canvas.height * scale;
+        const tempCtx = tempCanvas.getContext("2d");
+        if (tempCtx) {
+          tempCtx.imageSmoothingEnabled = true;
+          tempCtx.imageSmoothingQuality = "high";
+          tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+          finalCanvas = tempCanvas;
+        }
+      }
+
       const link = document.createElement("a");
-      link.download = "edited-image.png";
-      link.href = canvas.toDataURL();
+      link.download = `wimp-export-${Date.now()}.${format === "jpeg" ? "jpg" : format}`;
+      link.href = finalCanvas.toDataURL(`image/${format}`, quality);
       link.click();
     }
   };
@@ -112,7 +132,7 @@ export const HomePage: React.FC = () => {
           <button className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg transition-all active:scale-95" onClick={triggerFileUpload}>
             Open
           </button>
-          <button className="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-sm font-bold rounded-lg transition-all active:scale-95 border border-gray-700" onClick={exportImage}>
+          <button className="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-sm font-bold rounded-lg transition-all active:scale-95 border border-gray-700" onClick={() => exportImage()}>
             Export
           </button>
         </div>
