@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, } from "react";
 import { Tool } from "./types/image-editor";
 import { Toolbar } from "./components/ImageEditor/Toolbar";
 import { CropTools } from "./components/ImageEditor/CropTools";
@@ -8,7 +8,7 @@ import { BlurTools } from "./components/ImageEditor/BlurTools";
 import { FilterPanel } from "./components/ImageEditor/FilterPanel";
 import { FileOperations } from "./components/ImageEditor/FileOperations";
 
-export const HomePage: React.FC = () => {
+export const HomePage: React.FC = () => >Web-based Image Manipulation Program{
   const [currentTool, setCurrentTool] = useState<Tool>("pencil");
   const [history, setHistory] = useState<ImageData[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -104,9 +104,9 @@ export const HomePage: React.FC = () => {
       {/* Main Header */}
       <header className="bg-gray-900 text-white px-6 py-3 flex justify-between items-center shrink-0">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-black tracking-tighter uppercase italic">ImageEd</h1>
+          <h1 className="text-xl font-black tracking-tighter uppercase italic">WIMP</h1>
           <div className="h-4 w-px bg-gray-700" />
-          <p className="text-xs text-gray-400 font-medium">Professional Decentralized Editor</p>
+          <p className="text-xs text-gray-400 font-medium">Web-based Image Manipulation Program.</p>
         </div>
         <div className="flex items-center gap-3">
           <button className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg transition-all active:scale-95" onClick={triggerFileUpload}>
