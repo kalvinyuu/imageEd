@@ -8,7 +8,7 @@ import { BlurTools } from "./components/ImageEditor/BlurTools";
 import { FilterPanel } from "./components/ImageEditor/FilterPanel";
 import { FileOperations } from "./components/ImageEditor/FileOperations";
 
-export const HomePage: React.FC = () => >Web-based Image Manipulation Program{
+export const HomePage: React.FC = () => {
   const [currentTool, setCurrentTool] = useState<Tool>("pencil");
   const [history, setHistory] = useState<ImageData[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
