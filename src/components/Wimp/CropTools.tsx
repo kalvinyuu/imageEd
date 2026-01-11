@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { CropState, Point, ResizeHandle } from "../../types/image-editor";
+import { CropState, Point, ResizeHandle } from "../../types/wimp";
 import { flipAspectRatio, getCropRect, getResizeHandle, isInsideCropArea, boundCoordinates, getCanvasCoordinates } from "../../utils/image-utils";
 
 interface CropToolsProps {

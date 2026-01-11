@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { Filter } from "../../types/image-editor";
+import { Filter } from "../../types/wimp";
 
 interface FilterPanelProps {
     canvasRef: React.RefObject<HTMLCanvasElement | null>;

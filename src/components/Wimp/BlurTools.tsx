@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { BlurMode, Tool, Point } from "../../types/image-editor";
+import { BlurMode, Tool, Point } from "../../types/wimp";
 import { getCanvasCoordinates, applySecureBlur } from "../../utils/image-utils";
 
 interface BlurToolsProps {

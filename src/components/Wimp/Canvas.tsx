@@ -1,5 +1,5 @@
 import React from "react";
-import { CropState } from "../../types/image-editor";
+import { CropState } from "../../types/wimp";
 
 interface CanvasProps {
     canvasRef: React.RefObject<HTMLCanvasElement | null>;

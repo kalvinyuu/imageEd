@@ -18,7 +18,7 @@ Note: This project currently doesn't have configured test commands. Tests would 
 ## Code Style Guidelines
 
 ### Imports
-- Use relative imports for local files (e.g., `import ImageEditor from './imageEd'`)
+- Use relative imports for local files (e.g., `import Wimp from './Wimp'`)
 - Import React types explicitly when needed (e.g., `import type React from "react"`)
 - Group imports logically: external libraries, then local imports
 

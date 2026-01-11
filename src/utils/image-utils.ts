@@ -1,4 +1,4 @@
-import { Point, CropRect, ResizeHandle, BlurMode } from "../types/image-editor";
+import { Point, CropRect, ResizeHandle, BlurMode } from "../types/wimp";
 
 export const boundCoordinates = (
     x: number,

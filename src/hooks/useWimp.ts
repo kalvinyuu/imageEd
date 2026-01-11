@@ -1,17 +1,8 @@
 import { useRef, useState, useCallback, useEffect } from "react";
-import { CropState, ResizeHandle, Filter, Point, CropRect } from "../types/image-editor";
-import {
-    boundCoordinates,
-    flipAspectRatio,
-    getCropRect,
-    getResizeHandle,
-    isInsideCropArea,
-    getCanvasCoordinates,
-    applySecureBlur,
-} from "../utils/image-utils";
-import { BlurMode, Tool, TextObject } from "../types/image-editor";
+import { CropState, ResizeHandle, Filter, Point, CropRect } from "../types/wimp";
+import { BlurMode, Tool, TextObject } from "../types/wimp";
 
-export const useImageEditor = () => {
+export const useWimp = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);

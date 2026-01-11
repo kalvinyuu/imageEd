@@ -1,4 +1,4 @@
-# Image Editor Pro
+# wimp - Web-based Image Manipulation Program
 
 I created this project because I couldn't find an open-source and free-to-use image editor library that had solid touch support and was actively maintained. My goal is to provide a powerful and easy-to-use image editor for developers to integrate into their projects.
 
@@ -17,7 +17,7 @@ This project is a professional image editing application built with React and HT
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/your-username/image-Ed.git
+    git clone https://github.com/shopg41/wimp.git
     ```
 2.  **Install dependencies:**
     ```bash
@@ -28,18 +28,28 @@ This project is a professional image editing application built with React and HT
     bun run dev
     ```
 
+## Installation
+
+```bash
+npm install @shopg41/wimp
+# or
+bun add @shopg41/wimp
+# or
+yarn add @shopg41/wimp
+```
+
 ## Using it as a Library
 
-To use this image editor in your own project, you can import the `ImageEditor` component and use it in your application.
+To use this image editor in your own project, import the `Wimp` component and the necessary styles.
 
 ```jsx
-import ImageEditor from 'image-ed';
+import { Wimp } from '@shopg41/wimp';
+import '@shopg41/wimp/style.css';
 
 function App() {
   return (
-    <div>
-      <h1>My Awesome App</h1>
-      <ImageEditor />
+    <div style={{ height: '100vh' }}>
+      <Wimp />
     </div>
   );
 }

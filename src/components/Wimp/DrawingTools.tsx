@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Tool, TextObject, Point } from "../../types/image-editor";
+import { Tool, TextObject, Point } from "../../types/wimp";
 import { getCanvasCoordinates } from "../../utils/image-utils";
 import { v4 as uuidv4 } from "uuid";
 

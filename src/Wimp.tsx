@@ -1,14 +1,14 @@
 import React, { useState, useRef, useCallback, } from "react";
-import { Tool } from "./types/image-editor";
-import { Toolbar } from "./components/ImageEditor/Toolbar";
-import { CropTools } from "./components/ImageEditor/CropTools";
-import { DrawingTools } from "./components/ImageEditor/DrawingTools";
-import { AdjustmentPanel } from "./components/ImageEditor/AdjustmentPanel";
-import { BlurTools } from "./components/ImageEditor/BlurTools";
-import { FilterPanel } from "./components/ImageEditor/FilterPanel";
-import { FileOperations } from "./components/ImageEditor/FileOperations";
+import { Tool } from "./types/wimp";
+import { Toolbar } from "./components/Wimp/Toolbar";
+import { CropTools } from "./components/Wimp/CropTools";
+import { DrawingTools } from "./components/Wimp/DrawingTools";
+import { AdjustmentPanel } from "./components/Wimp/AdjustmentPanel";
+import { BlurTools } from "./components/Wimp/BlurTools";
+import { FilterPanel } from "./components/Wimp/FilterPanel";
+import { FileOperations } from "./components/Wimp/FileOperations";
 
-export const HomePage: React.FC = () => {
+export const Wimp: React.FC = () => {
   const [currentTool, setCurrentTool] = useState<Tool>("pencil");
   const [history, setHistory] = useState<ImageData[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -206,4 +206,4 @@ export const HomePage: React.FC = () => {
   );
 };
 
-export default HomePage;
+export default Wimp;

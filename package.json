@@ -1,10 +1,22 @@
 {
-	"name": "image-Ed",
-	"version": "0.1.0",
-	"private": true,
+	"name": "@shopg41/wimp",
+	"version": "0.0.1",
+	"description": "wimp - Web-based Image Manipulation Program",
 	"type": "module",
-	"main": "src/index.tsx",
-	"module": "src/index.tsx",
+	"main": "./dist/wimp.umd.cjs",
+	"module": "./dist/wimp.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/wimp.js",
+			"require": "./dist/wimp.umd.cjs"
+		},
+		"./style.css": "./dist/wimp.css"
+	},
+	"files": [
+		"dist"
+	],
 	"scripts": {
 		"dev": "bunx --bun vite",
 		"build": "vite build",
@@ -14,18 +26,20 @@
 		"@fortawesome/fontawesome-svg-core": "^7.0.0",
 		"@fortawesome/free-solid-svg-icons": "^7.0.0",
 		"@fortawesome/react-fontawesome": "^0.2.3",
-		"@tailwindcss/vite": "^4.1.11",
-		"bun-plugin-tailwind": "^0.0.14",
-		"gemini": "^7.5.2",
-		"html2canvas": "^1.4.1",
-		"react": "^19",
-		"react-dom": "^19",
-		"tailwindcss": "^4.0.6",
-		"vite": "^7.1.1"
+		"html2canvas": "^1.4.1"
 	},
 	"devDependencies": {
+		"@tailwindcss/vite": "^4.1.11",
+		"@types/bun": "latest",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
-		"@types/bun": "latest"
+		"bun-plugin-tailwind": "^0.0.14",
+		"tailwindcss": "^4.0.6",
+		"vite": "^7.1.1",
+		"vite-plugin-dts": "^4.5.0"
+	},
+	"peerDependencies": {
+		"react": "^19.2.3",
+		"react-dom": "^19.2.3"
 	}
 }
